@@ -1,0 +1,1061 @@
+```html
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MARQUES STRATEGIC ADVISOR</title>
+    
+    <!-- PWA Meta Tags para instalar como App no Telemóvel -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Marques Advisor">
+    
+    <!-- Tailwind CSS para Design Premium -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #020617;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Transição suave de telas */
+        .view-section {
+            display: none;
+        }
+        .view-section.active {
+            display: flex;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Header / Barra de Navegação -->
+    <nav class="flex justify-between items-center px-4 md:px-12 py-6 border-b border-white/5 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40">
+        <!-- Logo com gatilho de 5 cliques para Configuração Oculta da API -->
+        <div id="logo-trigger" class="flex items-center gap-2 cursor-pointer select-none">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 16 8.5 11 1 18"></polyline>
+                <polyline points="17 6 23 6 23 12"></polyline>
+            </svg>
+            <span class="text-[10px] min-[375px]:text-xs font-bold tracking-[0.15em] uppercase text-slate-200 hover:text-white transition-colors">
+                MARQUES STRATEGIC ADVISOR
+            </span>
+        </div>
+        <div class="flex gap-3 md:gap-8 text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <button onclick="navigateTo('landing')" class="hover:text-amber-500 transition-colors">Início</button>
+            <button onclick="navigateTo('agentes')" class="hover:text-amber-500 transition-colors">Agentes</button>
+            <button id="nav-panel" onclick="navigateTo('advisor')" class="text-amber-500 hover:text-amber-400 font-extrabold transition-colors hidden">Painel</button>
+            <button onclick="navigateTo('contato')" class="hover:text-amber-500 transition-colors">Contato</button>
+        </div>
+    </nav>
+
+    <!-- CONTAINER PRINCIPAL DE TELAS -->
+    <div class="flex-1 flex flex-col justify-center w-full">
+        
+        <!-- TELA 1: LANDING (HOME) -->
+        <section id="view-landing" class="view-section active flex-col items-center text-center max-w-4xl mx-auto py-16 px-6">
+            <h1 class="text-3xl md:text-5xl lg:text-6xl font-extralight text-white mb-6 tracking-tight leading-tight">
+                Consultoria de Board, <span class="text-amber-500 font-normal block md:inline">sob demanda.</span>
+            </h1>
+            
+            <!-- Frases táticas rotativas (30s) -->
+            <div class="min-h-[90px] mb-10 flex items-center justify-center max-w-2xl">
+                <p id="rotative-phrase" class="text-slate-400 text-sm md:text-base lg:text-lg font-light leading-relaxed transition-all duration-500">
+                    Carregando diretrizes estratégicas...
+                </p>
+            </div>
+
+            <button onclick="navigateTo('agentes')" class="bg-amber-500 text-slate-950 px-8 py-3.5 font-bold uppercase tracking-widest text-[10px] hover:bg-amber-400 transition-all font-mono rounded-sm">
+                Conhecer Agentes e Diagnósticos
+            </button>
+        </section>
+
+        <!-- TELA 2: AGENTES (VITRINE) -->
+        <section id="view-agentes" class="view-section flex-col max-w-6xl mx-auto py-12 px-4 md:px-12 w-full">
+            <h2 class="text-xl md:text-2xl font-light text-white mb-2 tracking-wide uppercase">Selecione os seus Agentes Executivos</h2>
+            <p class="text-slate-500 mb-8 text-xs">O pré-diagnóstico é gratuito. A assinatura libera o Painel Interativo de Consultoria de elite.</p>
+            
+            <div id="agents-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- Cards dos agentes gerados dinamicamente via JS -->
+            </div>
+
+            <div id="checkout-bar" class="bg-slate-900 p-6 md:p-8 flex flex-col md:flex-row justify-between items-center gap-4 border border-amber-500/20 rounded-sm hidden">
+                <span class="text-xs md:text-sm text-slate-300">Total (<span id="selected-count">0</span> selecionados): <span id="selected-total" class="text-amber-500 font-bold text-xl md:text-2xl ml-1">R$ 0,00</span></span>
+                <button onclick="handleCheckout()" class="bg-amber-500 text-slate-950 px-8 py-3.5 font-bold uppercase text-[10px] tracking-wider hover:bg-amber-400 transition-all w-full md:w-auto rounded-sm">
+                    Assinar com PayPal Seguro
+                </button>
+            </div>
+        </section>
+
+        <!-- TELA 3: DIAGNÓSTICO (CADASTRO / LEAD & QUESTÕES) -->
+        <section id="view-diagnostic" class="view-section flex-col max-w-xl mx-auto py-12 px-6 w-full">
+            <!-- Etapa A: Formulário de Captação de Leads -->
+            <div id="diagnostic-lead" class="bg-slate-900 p-6 md:p-8 border border-white/5 space-y-4">
+                <h2 class="text-lg text-white font-light tracking-wide uppercase">Cadastrar para Iniciar</h2>
+                <p class="text-[11px] text-slate-500 leading-relaxed">Insira os seus dados de contacto corporativos para desbloquear o diagnóstico gratuito do pilar <span id="lead-agent-title" class="text-amber-500 font-semibold"></span>.</p>
+                <form id="lead-form" onsubmit="submitLead(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-[9px] uppercase tracking-widest text-slate-400 mb-1.5 font-mono">Nome Completo</label>
+                        <input type="text" id="lead-name" required class="w-full bg-slate-950 border border-white/10 p-3 text-xs text-white rounded-sm focus:border-amber-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] uppercase tracking-widest text-slate-400 mb-1.5 font-mono">E-mail Corporativo</label>
+                        <input type="email" id="lead-email" required class="w-full bg-slate-950 border border-white/10 p-3 text-xs text-white rounded-sm focus:border-amber-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] uppercase tracking-widest text-slate-400 mb-1.5 font-mono">WhatsApp / Telefone</label>
+                        <input type="tel" id="lead-whatsapp" required placeholder="(XX) XXXXX-XXXX" class="w-full bg-slate-950 border border-white/10 p-3 text-xs text-white rounded-sm focus:border-amber-500 outline-none">
+                    </div>
+                    <button type="submit" class="w-full py-3.5 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] tracking-widest hover:bg-amber-400 transition-all rounded-sm">
+                        Desbloquear Diagnóstico Gratuito
+                    </button>
+                </form>
+            </div>
+
+            <!-- Etapa B: Questionário do Diagnóstico -->
+            <div id="diagnostic-quiz" class="bg-slate-900 p-6 md:p-8 border border-white/5 hidden">
+                <div class="flex justify-between text-[10px] uppercase tracking-widest text-slate-500 mb-4 font-mono">
+                    <span id="quiz-agent-name">Agente</span>
+                    <span>Questão <span id="quiz-current-step">1</span> de 10</span>
+                </div>
+                <p id="quiz-question-text" class="text-sm md:text-base text-white font-light leading-relaxed mb-6 min-h-[60px]"></p>
+                <div class="flex gap-4">
+                    <button onclick="answerQuestion(true)" class="flex-1 py-3 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] rounded-sm tracking-wider">Sim</button>
+                    <button onclick="answerQuestion(false)" class="flex-1 py-3 border border-white/10 font-bold text-slate-300 uppercase text-[10px] rounded-sm tracking-wider">Não</button>
+                </div>
+            </div>
+
+            <!-- Etapa C: Resultados do Score & Geração de AI -->
+            <div id="diagnostic-result" class="bg-slate-900 p-6 md:p-8 border border-white/5 space-y-4 hidden animate-fade-in">
+                <h2 class="text-lg md:text-xl text-white font-light tracking-wide uppercase">Resultado do Score: <span id="quiz-result-score" class="text-amber-500 font-bold">0%</span></h2>
+                <p class="text-[11px] text-slate-400 leading-relaxed">Vulnerabilidades estratégicas identificadas exigem mitigação de riscos imediata.</p>
+                
+                <button onclick="generateAIReport()" id="btn-generate-report" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 rounded-sm transition-all">
+                    Ver Parecer Técnico Inicial (AI)
+                </button>
+                
+                <div id="report-output" class="text-xs text-slate-300 bg-slate-950 p-4 border border-white/5 leading-relaxed whitespace-pre-line rounded-sm hidden max-h-60 overflow-y-auto"></div>
+                
+                <button id="btn-subscribe-now" class="w-full py-3.5 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] tracking-widest text-center rounded-sm transition-all">Assinar Este Agente Agora</button>
+            </div>
+        </section>
+
+        <!-- TELA 4: AUTH / LOGIN / CADASTRO -->
+        <section id="view-login" class="view-section flex-col max-w-md mx-auto py-16 px-6 w-full animate-fade-in">
+            <h2 id="auth-title" class="text-lg md:text-xl text-white mb-6 uppercase tracking-widest font-light text-center">Acesso à Consultoria</h2>
+            <form onsubmit="submitAuth(event)" class="space-y-4 bg-slate-900 p-6 border border-white/5 rounded-sm">
+                <div id="auth-extra-fields" class="hidden">
+                    <input type="text" id="auth-fullname" placeholder="Nome Completo" class="w-full bg-slate-950 border border-white/10 p-3.5 text-xs text-white outline-none mb-4">
+                </div>
+                <input type="email" required id="auth-email" placeholder="E-mail Corporativo" class="w-full bg-slate-950 border border-white/10 p-3.5 text-xs text-white outline-none">
+                <input type="password" required id="auth-password" placeholder="Senha" class="w-full bg-slate-950 border border-white/10 p-3.5 text-xs text-white outline-none">
+                
+                <button type="submit" id="btn-auth" class="w-full py-3.5 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] hover:bg-amber-400 transition-all rounded-sm">
+                    Entrar e Assinar
+                </button>
+
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-white/10"></div>
+                    <span class="flex-shrink mx-3 text-slate-500 text-[9px] uppercase tracking-widest">Ou entrar com</span>
+                    <div class="flex-grow border-t border-white/10"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" onclick="handleSocialLogin()" class="py-2.5 border border-white/10 text-[9px] uppercase tracking-widest hover:bg-white/5 transition-all text-slate-300 font-medium rounded-sm">
+                        Google
+                    </button>
+                    <button type="button" onClick="handleSocialLogin()" class="py-2.5 border border-white/10 text-[9px] uppercase tracking-widest hover:bg-white/5 transition-all text-slate-300 font-medium rounded-sm">
+                        Apple
+                    </button>
+                </div>
+
+                <p class="text-[11px] text-center text-slate-400 mt-4 font-light">
+                    <span id="auth-toggle-text">Não tem uma conta?</span> 
+                    <button type="button" onclick="toggleAuthMode()" id="auth-toggle-btn" class="text-amber-500 font-semibold ml-1">Criar conta</button>
+                </p>
+            </form>
+        </section>
+
+        <!-- TELA 5: PAINEL INTERATIVO (CHAT CONTRATADO) -->
+        <section id="view-advisor" class="view-section flex-col md:flex-row max-w-6xl mx-auto py-12 px-4 md:px-12 w-full gap-6 animate-fade-in">
+            <div class="w-full md:w-1/3 bg-slate-900 border border-white/5 p-4 space-y-4 flex flex-col justify-between">
+                <div>
+                    <h3 class="text-sm uppercase tracking-widest text-slate-500 font-bold mb-3">Seus Diretores Contratados</h3>
+                    <div id="subscribed-agents-list" class="space-y-2">
+                        <!-- Lista de agentes ativos -->
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-950 border border-white/5 rounded-sm hidden md:block">
+                    <span class="text-[9px] text-slate-500 uppercase tracking-widest block mb-1">Suporte Executivo</span>
+                    <p class="text-[10px] text-slate-400 leading-normal font-light">Envie relatórios em PDF, planilhas XLS ou utilize o microfone para ditados estratégicos.</p>
+                </div>
+            </div>
+            
+            <div class="flex-1 bg-slate-900 border border-white/5 p-4 md:p-6 flex flex-col justify-between h-[500px]">
+                <div id="chat-messages" class="overflow-y-auto space-y-3 p-1 flex-1 mb-4 max-h-[380px]">
+                    <!-- Mensagens do chat -->
+                </div>
+
+                <div class="border-t border-white/5 pt-4 space-y-2">
+                    <div id="attachment-preview" class="flex items-center justify-between bg-slate-950 px-3 py-1.5 border border-amber-500/20 text-[10px] text-amber-500 rounded-sm w-fit gap-3 hidden">
+                        <div class="flex items-center gap-1.5">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                            <span id="attached-file-name" class="font-medium"></span>
+                        </div>
+                        <button onclick="removeAttachment()" class="text-slate-500 hover:text-white font-bold text-xs">×</button>
+                    </div>
+                    
+                    <form onsubmit="sendChatMessage(event)" class="flex gap-2 items-center">
+                        <input type="file" id="file-input" class="hidden" onchange="handleFileAttached(event)">
+                        
+                        <button type="button" onclick="triggerFileInput()" class="bg-slate-950 border border-white/10 p-3 text-slate-400 hover:text-amber-500 hover:border-amber-500/50 rounded-sm" title="Anexar Arquivo">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        </button>
+
+                        <button type="button" id="btn-mic" onclick="toggleVoiceRecording()" class="p-3 border bg-slate-950 border-white/10 text-slate-400 hover:text-amber-500 hover:border-amber-500/50 rounded-sm" title="Gravação de Voz">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                        </button>
+
+                        <input type="text" id="chat-input" class="flex-1 bg-slate-950 border border-white/10 p-3 text-xs outline-none focus:border-amber-500/50 text-white" placeholder="Fazer consulta estratégica...">
+                        <button type="submit" class="bg-amber-500 text-slate-950 p-3 font-bold hover:bg-amber-400 rounded-sm" title="Enviar Mensagem">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" x2="11" y1="2" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- TELA 6: CONTATO (FORMULÁRIO DE E-MAIL) -->
+        <section id="view-contato" class="view-section flex-col max-w-xl mx-auto py-16 px-6 w-full animate-fade-in">
+            <h2 class="text-2xl font-light text-white mb-6 uppercase tracking-widest">Fale com a Diretoria</h2>
+            <p class="text-slate-500 text-xs mb-8 font-sans">E-mail corporativo: marquescmateus@gmail.com</p>
+            <form onsubmit="submitContactForm(event)" class="space-y-4">
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest text-slate-400 mb-1.5">Seu E-mail (Remetente)</label>
+                    <input type="email" required id="contact-sender" class="w-full bg-slate-900 border border-white/10 p-3.5 text-xs text-white outline-none rounded-sm">
+                </div>
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest text-slate-400 mb-1.5">Assunto</label>
+                    <input type="text" required id="contact-subject" class="w-full bg-slate-900 border border-white/10 p-3.5 text-xs text-white outline-none rounded-sm">
+                </div>
+                <div>
+                    <label class="block text-[9px] uppercase tracking-widest text-slate-400 mb-1.5">Mensagem</label>
+                    <textarea required id="contact-message" class="w-full bg-slate-950 border border-white/10 p-3.5 h-28 text-xs text-white outline-none rounded-sm"></textarea>
+                </div>
+                <button type="submit" id="btn-contact-submit" class="w-full py-3.5 bg-white/5 border border-white/10 text-white font-bold uppercase text-[10px] hover:bg-white/10 transition-all rounded-sm">
+                    Enviar Mensagem
+                </button>
+            </form>
+        </section>
+
+        <!-- MODAL DE CONFIGURAÇÃO SECRETO (5 cliques no Logo para abrir) -->
+        <div id="view-settings" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm hidden items-center justify-center p-6 z-50 animate-fade-in">
+            <div class="bg-slate-900 border border-white/10 p-6 md:p-8 rounded-sm max-w-md w-full relative">
+                <button onclick="toggleSettingsModal(false)" class="absolute top-4 right-4 text-slate-500 hover:text-white text-xl font-bold">×</button>
+                <h3 class="text-sm font-light text-white uppercase tracking-widest mb-3">Painel Secreto de Administração</h3>
+                <p class="text-[11px] text-slate-400 leading-normal mb-5">
+                    Insira a sua chave do Google Gemini. Esta chave é guardada localmente de forma segura no navegador.
+                </p>
+                <input type="text" id="setting-api-key" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-white/10 p-3.5 text-xs text-white mb-4 outline-none rounded-sm">
+                <div class="flex gap-3">
+                    <button onclick="saveApiKeySettings()" class="flex-1 py-3 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] tracking-wider rounded-sm font-sans">Guardar Chave</button>
+                    <button onclick="clearApiKeySettings()" class="px-5 py-3 border border-white/10 text-slate-400 uppercase text-[10px] rounded-sm font-sans">Limpar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE ALERTA PREMIUM (Substitui o alert padrão do navegador para melhor UX em iFrame) -->
+        <div id="custom-alert-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-6 z-50 animate-fade-in">
+            <div class="bg-slate-900 border border-white/10 p-6 rounded-sm max-w-sm w-full text-center">
+                <p id="custom-alert-text" class="text-xs text-slate-300 leading-relaxed mb-6 font-light"></p>
+                <button onclick="closeCustomAlert()" class="w-full py-2.5 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] tracking-wider rounded-sm font-sans">Entendido</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- RODAPÉ CORPORATIVO -->
+    <footer class="py-6 border-t border-white/5 text-center text-slate-600 text-[8px] md:text-[10px] uppercase tracking-widest mt-12 bg-slate-950">
+        <p>MARQUES STRATEGIC ADVISOR | <span class="text-slate-400 font-sans tracking-normal select-all break-all block px-4">marquescmateus@gmail.com</span></p>
+    </footer>
+
+    <!-- LOGICA EM JAVASCRIPT PURO (VELOZ, SEGURO E ZERO TRAVAMENTOS) -->
+    <script>
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const apiKey = ""; 
+
+        const HERO_PHRASES = [
+            "Vazando lucro? Metodologias aplicadas para estancar ineficiências que consomem até 20% da sua margem líquida.",
+            "Queimando caixa? Otimização tática de custos logísticos e procurement para proteção imediata do EBITDA.",
+            "Exposta a riscos? Governança, blindagem patrimonial e eficiência de controladoria para perpetuar o seu legado.",
+            "Realmente eficiente? Eleve a sua operação ao padrão global de lucratividade com suporte estratégico especializado."
+        ];
+
+        const scanOptions = {
+            'Juridico': { 
+                title: 'General Counsel - Jurídico', 
+                price: 60, 
+                icon: 'scale',
+                desc: 'Governança, blindagem societária e mitigação de passivos.',
+                questions: [
+                    'A estrutura societária protege o património pessoal dos sócios?',
+                    'Existe um programa formal de Compliance e prevenção de fraudes?',
+                    'O passivo trabalhista é monitorado com auditoria semestral?',
+                    'Os contratos com clientes e fornecedores são revisados por especialistas?',
+                    'Existe proteção robusta para propriedade intelectual e marcas?',
+                    'A empresa possui um manual de governança para tomadas de decisão?',
+                    'Existe blindagem jurídica contra execuções fiscais indevidas?',
+                    'O planeamento sucessório está documentado em acordo de sócios?',
+                    'A empresa cumpre rigorosamente as normas de proteção de dados?',
+                    'O contencioso é gerido com foco em acordos estratégicos e não apenas litígio?'
+                ],
+                systemPrompt: `Você é o Diretor Executivo Jurídico, General Counsel da Marques Advisor. Atua como consultor de elite especializado em riscos contratuais, compliance e proteção patrimonial. Suas respostas devem ser de alto padrão, objetivas e práticas. Adote estritamente a seguinte estrutura em português de Portugal:
+        1. Diagnóstico Inicial (Resumo objetivo do problema)
+        2. Causa provável
+        3. Riscos envolvidos
+        4. Recomendações executivas
+        5. Plano de ação prático (com priorização)
+        6. Indicadores de acompanhamento (KPIs)
+        7. Próxima melhor decisão`
+            },
+            'Financeiro': { 
+                title: 'CFO - Tesouraria', 
+                price: 60, 
+                icon: 'credit-card',
+                desc: 'Fluxo de caixa, tesouraria e capital de giro.',
+                questions: [
+                    'Seu fechamento financeiro (DRE) ocorre em menos de 5 dias úteis?',
+                    'Existe cultura de Orçamento Base Zero (OBZ) para as despesas?',
+                    'Seu fluxo de caixa projetado cobre um horizonte de 12 meses?',
+                    'O ERP está 100% integrado sem necessidade de planilhas paralelas?',
+                    'As margins de contribuição por produto são revisadas mensalmente?',
+                    'Existe controle rigoroso de taxas bancárias e assinaturas (SaaS)?',
+                    'Realiza planejamento tributário preventivo anualmente?',
+                    'A política de viagens e reembolsos é automatizada?',
+                    'O índice de liquidez corrente é monitorado como KPI vital?',
+                    'A diretoria recebe um cockpit de indicadores de margem semanalmente?'
+                ],
+                systemPrompt: `Você é o CFO e Diretor Executivo de Tesouraria e Finanças da Marques Advisor. Um consultor de alta performance. Responda em português de Portugal estruturando seu parecer executivo focado em caixa, capital de giro e mitigação de risco de liquidez. Use estritamente esta estrutura de resposta:
+        1. Diagnóstico Inicial
+        2. Causa provável
+        3. Riscos envolvidos
+        4. Recomendações executivas
+        5. Plano de ação prático
+        6. Indicadores de acompanhamento (KPIs)
+        7. Próxima melhor decisão`
+            },
+            'Comercial': { 
+                title: 'CSO - Vendas', 
+                price: 50, 
+                icon: 'target',
+                desc: 'Aceleração de pipeline e expansão de receita.',
+                questions: [
+                    'O processo de vendas está formalizado num Playbook?',
+                    'Seu time utiliza o CRM com precisão e disciplina diária?',
+                    'As metas anuais estão desdobradas em metas diárias por vendedor?',
+                    'Existe análise sistemática das razões de perda (Win/Loss)?',
+                    'Ocorre treino técnico semanal com a equipa de vendas?',
+                    'O Forecast de vendas tem margem de erro inferior a 10%?',
+                    'O comissionamento prioriza margem em vez de faturamento?',
+                    'O ticket médio cresceu nos últimos 12 meses?',
+                    'Existe mapeamento claro da Curva A de clientes e plano de Up-sell?',
+                    'A velocidade do ciclo de vendas foi reduzida?'
+                ],
+                systemPrompt: `Você é o CSO Diretor de Vendas da Marques Advisor. Responda em português de Portugal no estilo McKinsey/Deloitte. Use a estrutura: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            },
+            'Marketing': { 
+                title: 'CMO - Marketing', 
+                price: 50, 
+                icon: 'megaphone',
+                desc: 'Branding, posicionamento e performance de crescimento.',
+                questions: [
+                    'Você sabe exatamente qual é o seu CAC (Custo de Aquisição de Cliente)?',
+                    'O LTV (Lifetime Value) do seu cliente é pelo menos 3x maior que o seu CAC?',
+                    'Existe um cálculo rigoroso de ROI para cada campanha ou canal de mídia?',
+                    'Seu funil de marketing está 100% integrado ao funil de vendas?',
+                    'Sua estratégia de SEO e tráfego orgânico gera mais de 30% dos seus leads?',
+                    'Sua marca possui um Brandbook atualizado e respeitado?',
+                    'A gestão de leads é automatizada através de ferramentas de CRM?',
+                    'A taxa de conversão das suas Landing Pages está acima de 3%?',
+                    'Você mede a lealdade do cliente sistematicamente através de NPS?',
+                    'Sua empresa possui uma estratégia clara de retenção e recompra ativa?'
+                ],
+                systemPrompt: `Você é o CMO Diretor de Marketing da Marques Advisor. Foque em posicionamento de mercado e ROI. Use estritamente esta estrutura de resposta em português de Portugal: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            },
+            'Logistica': { 
+                title: 'CSCO - Logística', 
+                price: 40, 
+                icon: 'truck',
+                desc: 'Engenharia de malha e otimização de custo logístico.',
+                questions: [
+                    'Sua operação possui visibilidade de custos por rota em tempo real?',
+                    'A ocupação média dos veículos está acima de 85%?',
+                    'Existe processo formal de S&OP integrado ao financeiro?',
+                    'Você audita automaticamente 100% dos documentos de transporte?',
+                    'O Lead Time é monitorado e comparado com benchmark mensalmente?',
+                    'O custo logístico está abaixo de 12% sobre o faturamento?',
+                    'Utiliza tecnologia WMS para otimização de picking?',
+                    'Existe política ativa de gestão de ativos e manutenção?',
+                    'Sua malha logística foi revisada matematicamente este ano?',
+                    'A logística reversa é tratada como oportunidade de saving?'
+                ],
+                systemPrompt: `Você é o CSCO Diretor de Logística da Marques Advisor. Responda em português de Portugal no estilo McKinsey/Deloitte. Use a estrutura: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            },
+            'Procurement': { 
+                title: 'CPO - Procurement', 
+                price: 40, 
+                icon: 'briefcase',
+                desc: 'Strategic Sourcing e mitigação de riscos na cadeia de suprimentos.',
+                questions: [
+                    'Strategic Sourcing é aplicado em todas as categorias da Curva A?',
+                    'Utiliza a Matriz de Kraljic para definir estratégias de fornecimento?',
+                    'O cálculo de TCO é o critério de decisão principal?',
+                    'Fornecedores críticos possuem planos de mitigação de risco formais?',
+                    'Existe processo de bidding sistemático para renovação de contratos?',
+                    'O setor de compras possui metas de Hard Saving validadas?',
+                    'Utiliza e-procurement para itens transacionais?',
+                    'Os SLAs de fornecedores são monitorados?',
+                    'Existe um programa de SRM para desenvolver parceiros estratégicos?',
+                    'Sua política de compras garante conformidade tributária?'
+                ],
+                systemPrompt: `Você é o CPO Diretor de Compras da Marques Advisor. Responda em português de Portugal no estilo McKinsey/Deloitte. Use a estrutura: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            },
+            'RH': { 
+                title: 'CHRO - RH', 
+                price: 40, 
+                icon: 'users',
+                desc: 'Cultura, desenvolvimento e produtividade organizacional.',
+                questions: [
+                    'A sua taxa de Turnover voluntário está abaixo da média do seu setor?',
+                    'Existe um processo formal e documentado de Onboarding?',
+                    'A pesquisa de Clima Organizacional é realizada anualmente?',
+                    'Todos os líderes passam por avaliação de desempenho 360 graus?',
+                    'Sua empresa possui uma matriz de sucessão (Nine Box)?',
+                    'O seu passivo trabalhista é auditado e provisionado trimestralmente?',
+                    'Existe um orçamento anual dedicado a Treinamento e Desenvolvimento?',
+                    'Seu plano de cargos e salários está atualizado?',
+                    'As interviews de desligamento geram planos de ação concretos?',
+                    'As metas de RH estão diretamente atreladas ao resultado financeiro?'
+                ],
+                systemPrompt: `Você é o CHRO Diretor de Recursos Humanos da Marques Advisor. Responda em português de Portugal no estilo McKinsey/Deloitte. Use a estrutura: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            },
+            'SaudeFinanceira': { 
+                title: 'Wealth Management', 
+                price: 30, 
+                icon: 'heart-pulse',
+                desc: 'Planejamento sucessório, patrimonial e blindagem física/jurídica.',
+                questions: [
+                    'Seu patrimônio pessoal está juridicamente blindado contra riscos PJ?',
+                    'Pelo menos 20% do patrimônio líquido está em moedas fortes globais?',
+                    'Existe uma estrutura sucessória (Holding/ITCMD) planejada?',
+                    'Sua alocação de ativos segue estratégia top-down?',
+                    'Possui uma reserva de oportunidade líquida para crises?',
+                    'Seis investimentos possuem proteção cambial (Hedge) ativa?',
+                    'Utiliza estruturas internacionais para impostos?',
+                    'Seu portfólio é revisado trimestralmente por assessor?',
+                    'Sua exposição a risco é condizente com seu horizonte de tempo?',
+                    'O seguro de vida é usado como ferramenta de liquidez sucessória?'
+                ],
+                systemPrompt: `Você é o Diretor de Wealth Management da Marques Advisor. Responda em português de Portugal no estilo McKinsey/Deloitte. Use a estrutura: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            },
+            'Investor': { 
+                title: 'IR - Investor Relations', 
+                price: 30, 
+                icon: 'trending-up',
+                desc: 'Captação de recursos, pitch decks estruturados e governança.',
+                questions: [
+                    'Você sabe exatamente qual é o valuation estimado da sua empresa?',
+                    'A empresa possui auditoria externa confiável de suas demonstrações?',
+                    'O pitch deck corporativo está atualizado para apresentação técnica?',
+                    'Existe governança interna para dar satisfação a acionistas minoritários?',
+                    'Sua estrutura societária suporta a entrada imediata de novos sócios?',
+                    'A empresa possui fluxo de caixa e balanço prontos para due diligence?',
+                    'O plano de crescimento detalha a aplicação exata do aporte?',
+                    'Os fundadores possuem acordos de lock-up e regras claras de saída?',
+                    'Você monitora múltiplos de EBITDA no seu setor de mercado?',
+                    'A empresa está inserida formalmente in rodadas de captação ativas?'
+                ],
+                systemPrompt: `Você é o Diretor de RI da Marques Advisor. Responda em português de Portugal no estilo McKinsey/Deloitte. Use a estrutura: 1. Diagnóstico Inicial, 2. Causa provável, 3. Riscos, 4. Recomendações, 5. Plano de ação, 6. KPIs, 7. Próxima decisão.`
+            }
+        };
+
+        const icons = {
+            'trending-up': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 16 8.5 11 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>`,
+            'scale': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.87.5-1.93.5-2.8 0l-.2-.1-.2.1c-.87.5-1.93.5-2.8 0zM2 16 3-8 3 8c-.87.5-1.93.5-2.8 0l-.2-.1-.2.1c-.87.5-1.93.5-2.8 0zM7 21h10M12 3v18M3 7h18"></path></svg>`,
+            'credit-card': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"></rect><line x1="2" x2="22" y1="10" y2="10"></line></svg>`,
+            'target': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>`,
+            'megaphone': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m3 11 18-5v12L3 13v-2Z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path></svg>`,
+            'truck': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect width="16" height="10" x="2" y="6" rx="2"></rect><path d="M18 10h4l2 3v3h-6v-6Z"></path><circle cx="7.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>`,
+            'briefcase': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><rect width="20" height="14" x="2" y="6" rx="2"></rect></svg>`,
+            'users': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
+            'heart-pulse': `<svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path><path d="M3.22 12H9.5l1.5-5 2 10 1.5-5h3.1"></path></svg>`
+        };
+
+        let currentView = 'landing';
+        let selectedAgents = [];
+        let subscribedAgents = [];
+        let leadFormDetails = { name: '', email: '', whatsapp: '' };
+        let activeLeadAgent = null;
+        let authMode = 'login'; // login ou register
+        let customApiKey = localStorage.getItem('gemini_api_key') || "";
+
+        // Estados do questionário gratuito
+        let quizAnswers = [];
+        let quizStep = 0;
+        let quizResult = null;
+
+        // Estados do Chat ativo
+        let activeChatAgent = null;
+        let chatMessages = {};
+        let attachedFile = null;
+        let isRecording = false;
+        let recognition = null;
+        let isSending = false;
+
+        // Gatilho Secreto de cliques no Logo
+        let logoClickCount = 0;
+        let logoClickTimeout;
+        document.getElementById('logo-trigger').addEventListener('click', () => {
+            logoClickCount++;
+            clearTimeout(logoClickTimeout);
+            logoClickTimeout = setTimeout(() => { logoClickCount = 0; }, 2000);
+            
+            if (logoClickCount >= 5) {
+                logoClickCount = 0;
+                toggleSettingsModal(true);
+            }
+        });
+
+        // Controle de Rotas / Abas
+        function navigateTo(viewName) {
+            // Remove a classe 'active' de todas as views e adiciona 'hidden' do Tailwind
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.remove('active');
+                section.classList.add('hidden');
+            });
+            
+            const targetSection = document.getElementById(`view-${viewName}`);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('active');
+                currentView = viewName;
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Configuração de Frases Rotativas no Painel Inicial
+        let phraseIndex = 0;
+        function rotatePhrases() {
+            const el = document.getElementById('rotative-phrase');
+            if (el) {
+                el.style.opacity = 0;
+                setTimeout(() => {
+                    phraseIndex = (phraseIndex + 1) % HERO_PHRASES.length;
+                    el.innerText = HERO_PHRASES[phraseIndex];
+                    el.style.opacity = 1;
+                }, 500);
+            }
+        }
+        setInterval(rotatePhrases, 30000);
+        document.getElementById('rotative-phrase').innerText = HERO_PHRASES[0];
+
+        // Alerta customizado
+        function showCustomAlert(message) {
+            document.getElementById('custom-alert-text').innerText = message;
+            const modal = document.getElementById('custom-alert-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCustomAlert() {
+            const modal = document.getElementById('custom-alert-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Geração dinâmica dos Cards dos Agentes
+        function renderAgents() {
+            const grid = document.getElementById('agents-grid');
+            grid.innerHTML = '';
+            
+            Object.entries(scanOptions).map(([id, opt]) => {
+                const card = document.createElement('div');
+                card.id = `agent-card-${id}`;
+                card.className = `bg-slate-900 p-6 md:p-8 border transition-all flex flex-col justify-between rounded-sm ${selectedAgents.includes(id) ? 'border-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.1)]' : 'border-white/5'}`;
+                
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-start font-bold mb-3">
+                            <div class="flex items-center gap-2">
+                                ${icons[opt.icon] || ''}
+                                <span class="text-white text-xs md:text-sm uppercase tracking-wider">${opt.title}</span>
+                            </div>
+                            <input type="checkbox" class="w-4 h-4 accent-amber-500 cursor-pointer rounded-sm" ${selectedAgents.includes(id) ? 'checked' : ''} onchange="toggleAgentSelection('${id}')">
+                        </div>
+                        <p class="text-[10px] md:text-xs text-slate-500 mb-6 leading-relaxed min-h-[36px]">${opt.desc}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] md:text-xs font-bold text-amber-500 mb-5">R$ ${opt.price},00 / mês</p>
+                        <button onclick="startDiagnosticProcess('${id}')" class="w-full py-2 border border-white/10 text-[9px] uppercase font-bold hover:bg-white/5 transition-all rounded-sm">Pré-Diagnóstico Gratuito</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+            updateCheckoutBar();
+        }
+
+        function toggleAgentSelection(id) {
+            if (selectedAgents.includes(id)) {
+                selectedAgents = selectedAgents.filter(item => item !== id);
+            } else {
+                selectedAgents.push(id);
+            }
+            renderAgents();
+        }
+
+        function updateCheckoutBar() {
+            const bar = document.getElementById('checkout-bar');
+            if (selectedAgents.length > 0) {
+                bar.classList.remove('hidden');
+                document.getElementById('selected-count').innerText = selectedAgents.length;
+                
+                let val = selectedAgents.reduce((sum, id) => sum + scanOptions[id].price, 0);
+                if (selectedAgents.length >= 6) val = 200; // Desconto Board Completo
+                
+                document.getElementById('selected-total').innerText = `R$ ${val},00`;
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        // Fluxo de Pré-Diagnóstico Gratuito
+        function startDiagnosticProcess(id) {
+            activeLeadAgent = id;
+            document.getElementById('lead-agent-title').innerText = scanOptions[id].title;
+            
+            // Reinicia estados do quiz
+            quizStep = 0;
+            quizAnswers = [];
+            quizResult = null;
+            document.getElementById('lead-form').reset();
+            
+            // Define o fluxo visual
+            document.getElementById('diagnostic-lead').classList.remove('hidden');
+            document.getElementById('diagnostic-quiz').classList.add('hidden');
+            document.getElementById('diagnostic-result').classList.add('hidden');
+            document.getElementById('report-output').classList.add('hidden');
+            document.getElementById('report-output').innerText = "";
+            
+            navigateTo('diagnostic');
+        }
+
+        function submitLead(event) {
+            let e = event || window.event;
+            e.preventDefault();
+            leadFormDetails.name = document.getElementById('lead-name').value;
+            leadFormDetails.email = document.getElementById('lead-email').value;
+            leadFormDetails.whatsapp = document.getElementById('lead-whatsapp').value;
+            
+            document.getElementById('diagnostic-lead').classList.add('hidden');
+            document.getElementById('diagnostic-quiz').classList.remove('hidden');
+            
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            const opt = scanOptions[activeLeadAgent];
+            document.getElementById('quiz-agent-name').innerText = opt.title;
+            document.getElementById('quiz-current-step').innerText = quizStep + 1;
+            document.getElementById('quiz-question-text').innerText = opt.questions[quizStep];
+        }
+
+        function answerQuestion(answer) {
+            quizAnswers.push(answer);
+            quizStep++;
+            
+            if (quizStep < 10) {
+                renderQuizQuestion();
+            } else {
+                calculateQuizResult();
+            }
+        }
+
+        function calculateQuizResult() {
+            const yesCount = quizAnswers.filter(a => a === true).length;
+            quizResult = Math.round((yesCount / 10) * 100);
+            
+            document.getElementById('diagnostic-quiz').classList.add('hidden');
+            document.getElementById('diagnostic-result').classList.remove('hidden');
+            document.getElementById('quiz-result-score').innerText = `${quizResult}%`;
+            
+            // Personaliza o botão final de assinatura
+            const btn = document.getElementById('btn-subscribe-now');
+            btn.innerText = `Assinar ${scanOptions[activeLeadAgent].title} agora`;
+            btn.onclick = () => {
+                if (!selectedAgents.includes(activeLeadAgent)) {
+                    selectedAgents.push(activeLeadAgent);
+                }
+                handleCheckout();
+            };
+        }
+
+        // Função de envio à API do Gemini com Backoff Exponencial (Até 5 tentativas)
+        async function fetchWithBackoff(url, options, retries = 5, delay = 1000) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                if (retries > 1) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return fetchWithBackoff(url, options, retries - 1, delay * 2);
+                } else {
+                    throw error;
+                }
+            }
+        }
+
+        async function generateAIReport() {
+            const output = document.getElementById('report-output');
+            const btn = document.getElementById('btn-generate-report');
+            
+            output.classList.remove('hidden');
+            output.innerHTML = "<span class='text-amber-500 animate-pulse text-xs'>A analisar bases de dados e a gerar sumário tático executivo...</span>";
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 mr-2 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Gerando...`;
+
+            const systemInstruction = "Gere um parecer de riscos corporativo muito maduro, no estilo de consultorias globais, escrito estritamente em português de Portugal.";
+            const userPrompt = `A empresa do cliente tirou um score de conformidade e maturidade de ${quizResult}% no módulo de ${activeLeadAgent}. Gere um sumário executivo detalhando vulnerabilidades corporativas prováveis baseadas neste diagnóstico.`;
+
+            try {
+                const activeKey = customApiKey || apiKey;
+                if (!activeKey) {
+                    output.innerHTML = "<span class='text-red-500 text-xs'>Erro: A Chave de API do Gemini não foi configurada. Use o menu oculto de administração (5 cliques no logotipo superior) para configurar a sua chave.</span>";
+                    btn.disabled = false;
+                    btn.innerText = "Ver Parecer Técnico Inicial (AI)";
+                    return;
+                }
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${activeKey}`;
+                const payload = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: userPrompt }] }], 
+                        systemInstruction: { parts: [{ text: systemInstruction }] } 
+                    })
+                };
+
+                const data = await fetchWithBackoff(url, payload);
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Falha técnica ao formatar relatório.";
+                output.innerText = text;
+            } catch (err) {
+                output.innerHTML = "<span class='text-red-500 text-xs'>Ocorreu um erro técnico na ligação aos servidores de inteligência artificial ou a sua Chave de API é inválida.</span>";
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Ver Parecer Técnico Inicial (AI)";
+            }
+        }
+
+        // Fluxo de Checkout e Autenticação
+        function handleCheckout() {
+            if (selectedAgents.length === 0) {
+                showCustomAlert("Por favor, selecione pelo menos um agente na vitrine para prosseguir.");
+                return;
+            }
+            if (!isLoggedIn) {
+                navigateTo('login');
+            } else {
+                // Simula confirmação do PayPal e libera licenças
+                subscribedAgents = [...new Set([...subscribedAgents, ...selectedAgents])];
+                document.getElementById('nav-panel').classList.remove('hidden');
+                
+                // Configura o painel ativo de Chat
+                activeChatAgent = subscribedAgents[0];
+                chatMessages = {};
+                renderSubscribedAgentsList();
+                openAgentChat(activeChatAgent);
+                navigateTo('advisor');
+            }
+        }
+
+        function toggleAuthMode() {
+            const title = document.getElementById('auth-title');
+            const extra = document.getElementById('auth-extra-fields');
+            const btn = document.getElementById('btn-auth');
+            const toggleText = document.getElementById('auth-toggle-text');
+            const toggleBtn = document.getElementById('auth-toggle-btn');
+            
+            if (authMode === 'login') {
+                authMode = 'register';
+                title.innerText = "Criar Nova Conta";
+                extra.classList.remove('hidden');
+                btn.innerText = "Cadastrar e Assinar";
+                toggleText.innerText = "Já possui uma conta?";
+                toggleBtn.innerText = "Fazer Login";
+            } else {
+                authMode = 'login';
+                title.innerText = "Acesso à Consultoria";
+                extra.classList.add('hidden');
+                btn.innerText = "Entrar e Assinar";
+                toggleText.innerText = "Não tem uma conta?";
+                toggleBtn.innerText = "Criar conta";
+            }
+        }
+
+        function submitAuth(e) {
+            e.preventDefault();
+            handleLoginSuccess();
+        }
+
+        function handleSocialLogin() {
+            handleLoginSuccess();
+        }
+
+        function handleLoginSuccess() {
+            isLoggedIn = true;
+            subscribedAgents = [...new Set([...subscribedAgents, ...selectedAgents])];
+            document.getElementById('nav-panel').classList.remove('hidden');
+            
+            activeChatAgent = subscribedAgents[0];
+            chatMessages = {};
+            renderSubscribedAgentsList();
+            openAgentChat(activeChatAgent);
+            navigateTo('advisor');
+        }
+
+        // Chat e Interações Executivas (Com Suporte a Anexo e Voz)
+        function renderSubscribedAgentsList() {
+            const container = document.getElementById('subscribed-agents-list');
+            container.innerHTML = '';
+            
+            subscribedAgents.forEach(id => {
+                const button = document.createElement('button');
+                button.className = `w-full text-left p-3.5 border transition-all text-[10px] font-bold uppercase tracking-wider rounded-sm ${activeChatAgent === id ? 'border-amber-500 bg-amber-500/10 text-white' : 'border-white/5 text-slate-400'}`;
+                button.innerText = scanOptions[id].title;
+                button.onclick = () => openAgentChat(id);
+                container.appendChild(button);
+            });
+        }
+
+        function openAgentChat(id) {
+            activeChatAgent = id;
+            renderSubscribedAgentsList();
+            
+            if (!chatMessages[id]) {
+                chatMessages[id] = [{
+                    role: 'model',
+                    text: `Módulo estratégico de alta performance ativado.\nComo Diretor Executivo (${scanOptions[id].title}), estou inteiramente disponível para analisar os seus dados e orientar as decisões vitais da empresa.`
+                }];
+            }
+            
+            renderChatMessages();
+            removeAttachment();
+        }
+
+        function renderChatMessages() {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            
+            const list = chatMessages[activeChatAgent] || [];
+            list.forEach(m => {
+                const msgBox = document.createElement('div');
+                msgBox.className = `flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`;
+                
+                const bubble = document.createElement('div');
+                bubble.className = `p-3.5 rounded-lg text-xs max-w-[85%] whitespace-pre-line leading-relaxed ${m.role === 'user' ? 'bg-amber-500 text-slate-950 font-medium' : 'bg-slate-950 border border-white/5 text-slate-300'}`;
+                bubble.innerText = m.text;
+                
+                msgBox.appendChild(bubble);
+                container.appendChild(msgBox);
+            });
+            
+            setTimeout(() => {
+                container.scrollTop = container.scrollHeight;
+            }, 100);
+        }
+
+        // Manipulação de Upload / Anexos
+        function triggerFileInput() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileAttached(e) {
+            if (e.target.files && e.target.files[0]) {
+                attachedFile = e.target.files[0];
+                document.getElementById('attached-file-name').innerText = `${attachedFile.name} (${(attachedFile.size / 1024).toFixed(1)} KB)`;
+                document.getElementById('attachment-preview').classList.remove('hidden');
+            }
+        }
+
+        function removeAttachment() {
+            attachedFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('attachment-preview').classList.add('hidden');
+        }
+
+        // Transcrição de Voz por Microfone
+        function toggleVoiceRecording() {
+            const btn = document.getElementById('btn-mic');
+            const input = document.getElementById('chat-input');
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                showCustomAlert("O seu navegador não suporta transcrição de áudio nativa no telemóvel.");
+                return;
+            }
+
+            if (isRecording) {
+                if (recognition) recognition.stop();
+                isRecording = false;
+                btn.className = "p-3 border bg-slate-950 border-white/10 text-slate-400 hover:text-amber-500 hover:border-amber-500/50 rounded-sm";
+                input.placeholder = "Fazer consulta estratégica...";
+            } else {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'pt-PT';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = () => {
+                    isRecording = true;
+                    btn.className = "p-3 border bg-red-500/20 border-red-500 text-red-500 animate-pulse rounded-sm";
+                    input.placeholder = "Escutando a sua voz estrategista...";
+                };
+
+                recognition.onresult = (event) => {
+                    const txt = event.results[0][0].transcript;
+                    input.value = (input.value + " " + txt).trim();
+                };
+
+                recognition.onerror = () => {
+                    isRecording = false;
+                    btn.className = "p-3 border bg-slate-950 border-white/10 text-slate-400 hover:text-amber-500 hover:border-amber-500/50 rounded-sm";
+                    input.placeholder = "Fazer consulta estratégica...";
+                };
+
+                recognition.onend = () => {
+                    isRecording = false;
+                    btn.className = "p-3 border bg-slate-950 border-white/10 text-slate-400 hover:text-amber-500 hover:border-amber-500/50 rounded-sm";
+                    input.placeholder = "Fazer consulta estratégica...";
+                };
+
+                recognition.start();
+            }
+        }
+
+        async function sendChatMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chat-input');
+            const textVal = input.value.trim();
+            
+            if (!textVal && !attachedFile) return;
+            if (isSending) return;
+
+            let promptMsg = textVal;
+            if (attachedFile) {
+                promptMsg = `${textVal} \n[Ficheiro Anexado: ${attachedFile.name}]`.trim();
+            }
+
+            // Limpa entradas
+            input.value = '';
+            removeAttachment();
+
+            // Adiciona mensagem do utilizador localmente
+            chatMessages[activeChatAgent].push({ role: 'user', text: promptMsg });
+            renderChatMessages();
+            
+            isSending = true;
+
+            try {
+                const activeKey = customApiKey || apiKey;
+                if (!activeKey) {
+                    chatMessages[activeChatAgent].push({ role: 'model', text: "Erro: A Chave de API do Gemini não foi configurada no Painel de Administração. Por favor, acesse o painel oculto clicando 5 vezes seguidas no logotipo da empresa no menu superior." });
+                    renderChatMessages();
+                    return;
+                }
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${activeKey}`;
+                const payload = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        contents: [{ parts: [{ text: promptMsg }] }], 
+                        systemInstruction: { parts: [{ text: scanOptions[activeChatAgent].systemPrompt }] } 
+                    })
+                };
+
+                const data = await fetchWithBackoff(url, payload);
+                const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Lamento, ocorreu uma instabilidade na resposta técnica do Diretor.";
+                chatMessages[activeChatAgent].push({ role: 'model', text: aiResponse });
+            } catch (err) {
+                chatMessages[activeChatAgent].push({ role: 'model', text: "Erro ao estabelecer comunicação criptografada com os servidores do Advisor." });
+            } finally {
+                isSending = false;
+                renderChatMessages();
+            }
+        }
+
+        // Formulário de Contato Direto
+        function submitContactForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-contact-submit');
+            btn.innerText = "Mensagem Enviada!";
+            btn.className = "w-full py-3.5 bg-amber-500 text-slate-950 font-bold uppercase text-[10px] tracking-widest rounded-sm";
+            
+            setTimeout(() => {
+                document.getElementById('contact-sender').value = '';
+                document.getElementById('contact-subject').value = '';
+                document.getElementById('contact-message').value = '';
+                btn.innerText = "Enviar Mensagem";
+                btn.className = "w-full py-3.5 bg-white/5 border border-white/10 text-white font-bold uppercase text-[10px] hover:bg-white/10 transition-all rounded-sm";
+                navigateTo('landing');
+            }, 2500);
+        }
+
+        // Modal de Configuração Secreta (API)
+        function toggleSettingsModal(show) {
+            const modal = document.getElementById('view-settings');
+            if (show) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.getElementById('setting-api-key').value = customApiKey;
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function saveApiKeySettings() {
+            const val = document.getElementById('setting-api-key').value.trim();
+            customApiKey = val;
+            localStorage.setItem('gemini_api_key', val);
+            toggleSettingsModal(false);
+        }
+
+        function clearApiKeySettings() {
+            customApiKey = "";
+            localStorage.removeItem('gemini_api_key');
+            document.getElementById('setting-api-key').value = "";
+            toggleSettingsModal(false);
+        }
+
+        // Inicialização do Aplicativo
+        renderAgents();
+    </script>
+</body>
+</html>
+
+```
