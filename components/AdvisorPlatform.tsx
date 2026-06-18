@@ -424,9 +424,9 @@ export function AdvisorPlatform() {
           </div>
           <div className="mt-14 grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             {[
-              ['Diagnóstico executivo', 'Cadastro de pessoa física ou jurídica para mapear dores, margem, caixa e crescimento.'],
-              ['Banco e login', 'Supabase para usuários, leads, empresas, assinaturas e histórico.'],
-              ['IA segura', 'Gemini no backend, sem expor chave no navegador.']
+              ['Diagnóstico de Gestão', 'Identificamos gargalos em margem, caixa, operação, vendas e processos.'],
+              ['Plano de Ação Executivo', 'Você recebe recomendações práticas para reduzir perdas, melhorar controle e acelerar decisões.'],
+              ['Advisor sob Demanda', 'Acesse especialistas virtuais por área da empresa para apoiar decisões estratégicas.']
             ].map(([title, desc]) => (
               <div key={title} className="border border-white/5 bg-slate-900 p-6 text-left">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-white">{title}</h3>
@@ -621,7 +621,7 @@ export function AdvisorPlatform() {
       )}
 
       <footer className="mt-12 border-t border-white/5 px-6 py-6 text-center text-[9px] uppercase tracking-widest text-slate-600">
-        Marques Strategic Advisor | SaaS executivo com Supabase, Mercado Pago, Vercel e IA segura
+        Marques Strategic Advisor | Consultoria executiva para pequenas e médias empresas
       </footer>
     </main>
   );
