@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
+  TrendingUp,
   Truck,
   UsersRound,
   Workflow
@@ -380,7 +381,7 @@ export function AdvisorPlatform() {
     <main className="min-h-screen bg-slate-950 text-slate-200">
       <nav className="sticky top-0 z-40 flex items-center justify-between border-b border-white/5 bg-slate-950/90 px-4 py-5 backdrop-blur md:px-12">
         <button onClick={() => navigate('landing')} className="flex items-center gap-2 text-left">
-          <Sparkles className="h-6 w-6 text-amber-500" />
+          <TrendingUp className="h-6 w-6 text-amber-500" />
           <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-slate-100 md:text-xs">Marques Strategic Advisor</span>
         </button>
         <div className="flex flex-wrap items-center justify-end gap-3 text-[9px] font-bold uppercase tracking-widest text-slate-400 md:gap-6 md:text-[10px]">
@@ -408,7 +409,7 @@ export function AdvisorPlatform() {
       {view === 'landing' && (
         <section className="view-fade mx-auto flex max-w-5xl flex-col items-center px-6 py-16 text-center md:py-24">
           <div className="mb-5 rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-amber-400">
-            Board executivo sob demanda para pequenas e médias empresas
+            Board executivo sob demanda
           </div>
           <h1 className="max-w-4xl text-4xl font-extralight leading-tight text-white md:text-6xl">
             Consultoria estratégica com <span className="font-normal text-amber-500">advisors executivos</span> por assinatura.
