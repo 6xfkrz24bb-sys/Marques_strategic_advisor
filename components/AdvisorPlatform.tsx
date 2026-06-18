@@ -185,7 +185,7 @@ export function AdvisorPlatform() {
     setQuizStep(0);
     setQuizAnswers([]);
     setQuizFinished(false);
-    setAlertMessage('Lead cadastrado. Responda ao diagnóstico gratuito.');
+    setAlertMessage('Usuário cadastrado. Responda ao diagnóstico gratuito.');
   }
 
   async function answerQuestion(answer: boolean) {
@@ -339,11 +339,11 @@ export function AdvisorPlatform() {
         body: JSON.stringify(supplierForm)
       });
       const json = await response.json();
-      if (!json.ok) throw new Error(json.error || 'Falha ao cadastrar fornecedor.');
+      if (!json.ok) throw new Error(json.error || 'Falha ao cadastrar usuário.');
       setSupplierForm(emptySupplierForm);
-      setAlertMessage('Fornecedor cadastrado com sucesso para homologação.');
+      setAlertMessage('Cadastro recebido com sucesso. Em breve entraremos em contato para o diagnóstico.');
     } catch (error) {
-      setAlertMessage(error instanceof Error ? error.message : 'Erro no cadastro de fornecedor.');
+      setAlertMessage(error instanceof Error ? error.message : 'Erro no cadastro do usuário.');
     } finally {
       setIsBusy(false);
     }
@@ -385,7 +385,7 @@ export function AdvisorPlatform() {
         </button>
         <div className="flex flex-wrap items-center justify-end gap-3 text-[9px] font-bold uppercase tracking-widest text-slate-400 md:gap-6 md:text-[10px]">
           <button onClick={() => navigate('advisors')} className="hover:text-amber-500">Advisors</button>
-          <button onClick={() => navigate('suppliers')} className="hover:text-amber-500">Fornecedores</button>
+          <button onClick={() => navigate('suppliers')} className="hover:text-amber-500">Diagnóstico</button>
           <button onClick={() => navigate('contact')} className="hover:text-amber-500">Contato</button>
           {session ? (
             <>
@@ -419,13 +419,13 @@ export function AdvisorPlatform() {
               Conhecer advisors
             </button>
             <button onClick={() => navigate('suppliers')} className="border border-white/10 px-8 py-3.5 text-[10px] font-extrabold uppercase tracking-widest text-white hover:bg-white/5">
-              Cadastrar fornecedor
+              Solicitar diagnóstico
             </button>
           </div>
           <div className="mt-14 grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             {[
-              ['Pagamento real', 'Mercado Pago pronto para checkout e webhook de liberação.'],
-              ['Banco e login', 'Supabase para usuários, leads, fornecedores, assinaturas e histórico.'],
+              ['Diagnóstico executivo', 'Cadastro de pessoa física ou jurídica para mapear dores, margem, caixa e crescimento.'],
+              ['Banco e login', 'Supabase para usuários, leads, empresas, assinaturas e histórico.'],
               ['IA segura', 'Gemini no backend, sem expor chave no navegador.']
             ].map(([title, desc]) => (
               <div key={title} className="border border-white/5 bg-slate-900 p-6 text-left">
@@ -489,9 +489,9 @@ export function AdvisorPlatform() {
           {!leadName || !leadEmail ? (
             <form onSubmit={submitLeadAndStartQuiz} className="space-y-4 border border-white/5 bg-slate-900 p-6">
               <input required placeholder="Nome completo" value={leadName} onChange={(e) => setLeadName(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
-              <input required type="email" placeholder="E-mail corporativo" value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
+              <input required type="email" placeholder="E-mail" value={leadEmail} onChange={(e) => setLeadEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
               <input placeholder="WhatsApp" value={leadWhatsapp} onChange={(e) => setLeadWhatsapp(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
-              <input placeholder="Empresa" value={leadCompany} onChange={(e) => setLeadCompany(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
+              <input placeholder="Empresa ou negócio" value={leadCompany} onChange={(e) => setLeadCompany(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
               <button className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Iniciar diagnóstico</button>
             </form>
           ) : quizFinished ? (
@@ -592,17 +592,17 @@ export function AdvisorPlatform() {
 
       {view === 'suppliers' && (
         <section className="view-fade mx-auto max-w-3xl px-6 py-12">
-          <h2 className="text-2xl font-light uppercase tracking-widest text-white">Cadastro de fornecedores</h2>
-          <p className="mb-8 mt-2 text-xs leading-relaxed text-slate-500">Use este formulário como funil inicial de homologação. Os dados são gravados no Supabase para análise e classificação.</p>
+          <h2 className="text-2xl font-light uppercase tracking-widest text-white">Cadastro do novo usuário</h2>
+          <p className="mb-8 mt-2 text-xs leading-relaxed text-slate-500">Preencha como pessoa física ou pessoa jurídica. Use CPF para empresário individual/pessoa física e CNPJ para empresas constituídas. Os dados entram no funil de diagnóstico consultivo.</p>
           <form onSubmit={submitSupplier} className="grid grid-cols-1 gap-4 border border-white/5 bg-slate-900 p-6 md:grid-cols-2">
             {[
-              ['legalName', 'Razão social *'], ['tradeName', 'Nome fantasia'], ['taxId', 'CNPJ/CPF *'], ['category', 'Categoria'],
-              ['contactName', 'Contato'], ['email', 'E-mail *'], ['whatsapp', 'WhatsApp'], ['city', 'Cidade'], ['state', 'UF']
+              ['legalName', 'Nome completo ou razão social *'], ['tradeName', 'Nome fantasia ou marca'], ['taxId', 'CPF ou CNPJ *'], ['category', 'Principal desafio'],
+              ['contactName', 'Contato responsável'], ['email', 'E-mail *'], ['whatsapp', 'WhatsApp'], ['city', 'Cidade'], ['state', 'UF']
             ].map(([key, label]) => (
               <input key={key} required={label.includes('*')} placeholder={label} value={supplierForm[key as keyof SupplierForm]} onChange={(e) => setSupplierForm({ ...supplierForm, [key]: e.target.value })} className="border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
             ))}
-            <textarea placeholder="Observações, escopo, regiões atendidas, documentos enviados etc." value={supplierForm.notes} onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })} className="min-h-28 border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500 md:col-span-2" />
-            <button disabled={isBusy} className="bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60 md:col-span-2">Cadastrar fornecedor</button>
+            <textarea placeholder="Descreva o negócio, dores, objetivos, área crítica, faturamento aproximado ou contexto para o diagnóstico." value={supplierForm.notes} onChange={(e) => setSupplierForm({ ...supplierForm, notes: e.target.value })} className="min-h-28 border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500 md:col-span-2" />
+            <button disabled={isBusy} className="bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60 md:col-span-2">Solicitar diagnóstico</button>
           </form>
         </section>
       )}

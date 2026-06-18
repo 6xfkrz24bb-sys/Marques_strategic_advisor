@@ -5,7 +5,7 @@ import { badRequest, getUserFromBearer } from '@/lib/http';
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (!body?.legalName || !body?.taxId || !body?.email) {
-    return badRequest('Razão social, CNPJ/CPF e e-mail são obrigatórios.');
+    return badRequest('Nome/razão social, CPF/CNPJ e e-mail são obrigatórios.');
   }
 
   const user = await getUserFromBearer(request).catch(() => null);
