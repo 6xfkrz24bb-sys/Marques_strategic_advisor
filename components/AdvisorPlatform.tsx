@@ -80,6 +80,45 @@ const emptySupplierForm: SupplierForm = {
   notes: ''
 };
 
+const subscriptionPlans = {
+  essential: {
+    name: 'Plano Essencial',
+    price: 97,
+    label: '1 advisor executivo',
+    description: 'Ideal para testar uma área crítica da gestão com apoio consultivo.',
+    link: 'https://mpago.la/1YkeHXN'
+  },
+  executive: {
+    name: 'Plano Executivo',
+    price: 197,
+    label: 'Até 4 advisors executivos',
+    description: 'Mini board executivo para financeiro, operação, vendas, compras, RH ou logística.',
+    link: 'https://mpago.la/2GkAEwm'
+  },
+  pro: {
+    name: 'Board Pro',
+    price: 297,
+    label: 'Todos os advisors executivos',
+    description: 'Acesso completo ao board estratégico para apoiar decisões de gestão em todas as áreas.',
+    link: 'https://mpago.la/1rhJ6B5'
+  }
+};
+
+type SubscriptionPlanKey = keyof typeof subscriptionPlans;
+
+function getPlanByAdvisorCount(count: number): SubscriptionPlanKey | null {
+  if (count <= 0) return null;
+  if (count === 1) return 'essential';
+  if (count <= 4) return 'executive';
+  return 'pro';
+}
+
+function getPlanAdvisorLimit(planKey: SubscriptionPlanKey) {
+  if (planKey === 'essential') return 1;
+  if (planKey === 'executive') return 4;
+  return advisors.length;
+}
+
 export function AdvisorPlatform() {
   const supabase = useMemo(() => createClient(), []);
   const [view, setView] = useState<ViewName>('landing');
@@ -110,6 +149,8 @@ export function AdvisorPlatform() {
   const [phraseIndex, setPhraseIndex] = useState(0);
 
   const selectedTotal = calculateBoardPrice(selectedAdvisorIds);
+  const selectedPlanKey = getPlanByAdvisorCount(selectedAdvisorIds.length);
+  const selectedPlan = selectedPlanKey ? subscriptionPlans[selectedPlanKey] : null;
   const activeAdvisor = getAdvisor(activeAdvisorId) ?? advisors[0];
   const diagnosticAdvisor = getAdvisor(diagnosticAdvisorId) ?? advisors[0];
   const currentScore = quizFinished ? Math.round((quizAnswers.filter(Boolean).length / diagnosticAdvisor.questions.length) * 100) : 0;
@@ -246,44 +287,20 @@ export function AdvisorPlatform() {
 
   async function startCheckout() {
     if (!selectedAdvisorIds.length) {
-      setAlertMessage('Selecione pelo menos um advisor para assinar.');
+      setAlertMessage('Selecione pelo menos um advisor para escolher seu plano.');
       navigate('advisors');
       return;
     }
 
-    const { data } = await supabase.auth.getSession();
-    const activeSession = data.session || session;
-    if (!activeSession) {
-      navigate('login');
+    const planKey = getPlanByAdvisorCount(selectedAdvisorIds.length);
+    const plan = planKey ? subscriptionPlans[planKey] : null;
+
+    if (!plan) {
+      setAlertMessage('Não foi possível identificar o plano selecionado.');
       return;
     }
 
-    if (demoMode) {
-      setPaidAdvisorIds(selectedAdvisorIds);
-      setActiveAdvisorId(selectedAdvisorIds[0]);
-      setAlertMessage('Modo demonstração: advisors liberados sem pagamento real. Desative NEXT_PUBLIC_DEMO_MODE em produção.');
-      navigate('panel');
-      return;
-    }
-
-    setIsBusy(true);
-    try {
-      const response = await fetch('/api/checkout/mercadopago', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${activeSession.access_token}`
-        },
-        body: JSON.stringify({ advisorIds: selectedAdvisorIds })
-      });
-      const json = await response.json();
-      if (!json.ok) throw new Error(json.error || 'Falha ao criar checkout.');
-      window.location.href = json.checkoutUrl || json.sandboxUrl;
-    } catch (error) {
-      setAlertMessage(error instanceof Error ? error.message : 'Erro ao abrir checkout.');
-    } finally {
-      setIsBusy(false);
-    }
+    window.location.href = plan.link;
   }
 
   async function sendChatMessage(event: React.FormEvent) {
@@ -425,8 +442,8 @@ export function AdvisorPlatform() {
           </div>
           <div className="mt-14 grid w-full grid-cols-1 gap-4 md:grid-cols-3">
             {[
-              ['Diagnóstico de Gestão', 'Identificamos gargalos em margem, caixa, operação, vendas e processos.'],
-              ['Plano de Ação Executivo', 'Você recebe recomendações práticas para reduzir perdas, melhorar controle e acelerar decisões.'],
+              ['Diagnóstico Executivo', 'Comece gratuitamente com um diagnóstico inicial da maturidade da sua gestão.'],
+              ['Plano de Ação Executivo', 'Receba recomendações práticas para reduzir perdas, melhorar controle e acelerar decisões.'],
               ['Advisor sob Demanda', 'Acesse especialistas virtuais por área da empresa para apoiar decisões estratégicas.']
             ].map(([title, desc]) => (
               <div key={title} className="border border-white/5 bg-slate-900 p-6 text-left">
@@ -434,6 +451,35 @@ export function AdvisorPlatform() {
                 <p className="mt-3 text-xs leading-relaxed text-slate-500">{desc}</p>
               </div>
             ))}
+          </div>
+
+          <div className="mt-14 w-full text-left">
+            <div className="mb-5 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Planos de assinatura</p>
+              <h2 className="mt-2 text-2xl font-light text-white">Escolha o nível de apoio executivo ideal para sua empresa</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <div className="border border-white/5 bg-slate-900 p-6">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Entrada gratuita</p>
+                <h3 className="mt-3 text-lg font-bold text-white">Diagnóstico Executivo</h3>
+                <p className="mt-2 text-3xl font-bold text-amber-500">R$ 0</p>
+                <p className="mt-3 min-h-16 text-xs leading-relaxed text-slate-500">Preencha seus dados e faça um diagnóstico inicial de maturidade da gestão.</p>
+                <button onClick={() => navigate('suppliers')} className="mt-6 w-full border border-white/10 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-white/5">
+                  Solicitar diagnóstico
+                </button>
+              </div>
+              {Object.entries(subscriptionPlans).map(([key, plan]) => (
+                <div key={key} className={`border p-6 ${key === 'executive' ? 'border-amber-500 bg-amber-500/5 shadow-glow' : 'border-white/5 bg-slate-900'}`}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{plan.label}</p>
+                  <h3 className="mt-3 text-lg font-bold text-white">{plan.name}</h3>
+                  <p className="mt-2 text-3xl font-bold text-amber-500">R$ {plan.price}<span className="text-xs text-slate-500">/mês</span></p>
+                  <p className="mt-3 min-h-16 text-xs leading-relaxed text-slate-500">{plan.description}</p>
+                  <a href={plan.link} target="_blank" rel="noreferrer" className="mt-6 block w-full bg-amber-500 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-widest text-slate-950 hover:bg-amber-400">
+                    Assinar agora
+                  </a>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
@@ -443,14 +489,16 @@ export function AdvisorPlatform() {
           <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <h2 className="text-2xl font-light uppercase tracking-wide text-white">Selecione seus advisors executivos</h2>
-              <p className="mt-2 text-xs text-slate-500">Pré-diagnóstico gratuito. Assinatura libera o painel com IA e histórico.</p>
+              <p className="mt-2 text-xs text-slate-500">Diagnóstico gratuito. Depois escolha: Essencial (1 advisor), Executivo (até 4) ou Board Pro (todos).</p>
             </div>
             {selectedAdvisorIds.length > 0 && (
               <div className="border border-amber-500/20 bg-slate-900 p-4 text-right">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500">Total mensal</p>
-                <p className="text-2xl font-bold text-amber-500">R$ {selectedTotal},00</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500">Plano recomendado</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-white">{selectedPlan?.name}</p>
+                <p className="text-2xl font-bold text-amber-500">R$ {selectedTotal},00/mês</p>
+                <p className="mt-1 text-[10px] uppercase tracking-widest text-slate-500">{selectedPlan?.label}</p>
                 <button onClick={startCheckout} disabled={isBusy} className="mt-3 bg-amber-500 px-6 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-950 disabled:opacity-60">
-                  Assinar com Mercado Pago
+                  Assinar plano
                 </button>
               </div>
             )}
@@ -472,7 +520,7 @@ export function AdvisorPlatform() {
                   <p className="mt-5 min-h-12 text-xs leading-relaxed text-slate-500">{advisor.desc}</p>
                 </div>
                 <div className="mt-6 flex items-center justify-between gap-3">
-                  <p className="text-sm font-bold text-amber-500">R$ {advisor.price},00/mês</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-amber-500">Módulo selecionável</p>
                   <button onClick={() => startDiagnostic(advisor.id)} className="border border-white/10 px-4 py-2 text-[9px] font-bold uppercase tracking-widest text-slate-300 hover:bg-white/5">
                     Diagnóstico
                   </button>
@@ -504,7 +552,7 @@ export function AdvisorPlatform() {
               </p>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <button onClick={() => { if (!selectedAdvisorIds.includes(diagnosticAdvisor.id)) setSelectedAdvisorIds([...selectedAdvisorIds, diagnosticAdvisor.id]); startCheckout(); }} className="bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">
-                  Assinar este advisor
+                  Escolher plano
                 </button>
                 <button onClick={() => navigate('advisors')} className="border border-white/10 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300">Ver outros advisors</button>
               </div>

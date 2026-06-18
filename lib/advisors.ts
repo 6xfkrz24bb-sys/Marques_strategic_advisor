@@ -341,7 +341,9 @@ export function getAdvisor(id: string) {
 }
 
 export function calculateBoardPrice(ids: string[]) {
-  const unique = Array.from(new Set(ids));
-  const total = unique.reduce((sum, id) => sum + (getAdvisor(id)?.price ?? 0), 0);
-  return unique.length >= 6 ? Math.min(total, 250) : total;
+  const count = Array.from(new Set(ids)).length;
+  if (count === 0) return 0;
+  if (count === 1) return 97;
+  if (count <= 4) return 197;
+  return 297;
 }
