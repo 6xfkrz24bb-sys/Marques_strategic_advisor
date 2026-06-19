@@ -27,6 +27,15 @@ function clickFirstAdvisorDiagnostic() {
   }, 450);
 }
 
+function adjustFooterText() {
+  const footer = document.querySelector('footer');
+  if (!footer) return;
+  const currentText = footer.textContent?.toLowerCase() || '';
+  if (currentText.includes('pequenas e médias empresas') || currentText.includes('consultoria executiva')) {
+    footer.textContent = 'MARQUES STRATEGIC ADVISOR | BOARD EXECUTIVO';
+  }
+}
+
 export function LoggedUserDiagnosticAutofill() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -37,6 +46,7 @@ export function LoggedUserDiagnosticAutofill() {
     let alertTimer: number | undefined;
 
     async function handleLoggedUserDiagnostic() {
+      adjustFooterText();
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       if (!session?.user?.email || stopped) return;
