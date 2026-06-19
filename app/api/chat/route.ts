@@ -21,6 +21,11 @@ Regras de resposta para produto SaaS consultivo:
 - Se faltar contexto, faça no máximo 3 perguntas objetivas antes de aprofundar.
 `;
 
+function safeGeminiModel() {
+  const value = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim().replace(/^models\//, '');
+  return /^[a-zA-Z0-9_.-]+$/.test(value) ? value : 'gemini-2.5-flash';
+}
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (!body?.advisorId || !body?.message) return badRequest('Advisor e mensagem são obrigatórios.');
@@ -63,12 +68,12 @@ export async function POST(request: NextRequest) {
     usageNote = `\n\n---\nUso restante: ${Math.max(policy.limit - used - 1, 0)}/${policy.limit} (${policy.label}).`;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return badRequest('GEMINI_API_KEY não configurada no backend.', 500);
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: safeGeminiModel(),
     systemInstruction: `${advisor.systemPrompt}\n\n${responsePlaybook}`
   });
 
