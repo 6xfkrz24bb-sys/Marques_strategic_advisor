@@ -27,13 +27,26 @@ function clickFirstAdvisorDiagnostic() {
   }, 450);
 }
 
-function adjustFooterText() {
+function adjustMarketingCopy() {
   const footer = document.querySelector('footer');
-  if (!footer) return;
-  const currentText = footer.textContent?.toLowerCase() || '';
-  if (currentText.includes('pequenas e médias empresas') || currentText.includes('consultoria executiva')) {
-    footer.textContent = 'MARQUES STRATEGIC ADVISOR | BOARD EXECUTIVO';
+  if (footer) {
+    const currentText = footer.textContent?.toLowerCase() || '';
+    if (currentText.includes('pequenas e médias empresas') || currentText.includes('consultoria executiva')) {
+      footer.textContent = 'MARQUES STRATEGIC ADVISOR | BOARD EXECUTIVO';
+    }
   }
+
+  const headings = Array.from(document.querySelectorAll<HTMLElement>('h3, h2'));
+  headings.forEach((heading) => {
+    const normalized = heading.textContent?.trim().toLowerCase();
+    if (normalized === 'diagnóstico executivo') heading.textContent = 'Diagnóstico';
+    if (normalized === 'plano de ação executivo') heading.textContent = 'Plano de ação';
+  });
+
+  const planTitle = headings.find((heading) =>
+    heading.textContent?.trim().toLowerCase().includes('escolha o nível de apoio executivo ideal para sua empresa')
+  );
+  if (planTitle) planTitle.textContent = 'Escolha o nível de apoio ideal para sua empresa';
 }
 
 export function LoggedUserDiagnosticAutofill() {
@@ -46,7 +59,7 @@ export function LoggedUserDiagnosticAutofill() {
     let alertTimer: number | undefined;
 
     async function handleLoggedUserDiagnostic() {
-      adjustFooterText();
+      adjustMarketingCopy();
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       if (!session?.user?.email || stopped) return;
