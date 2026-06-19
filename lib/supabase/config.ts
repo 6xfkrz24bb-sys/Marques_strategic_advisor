@@ -1,6 +1,5 @@
 const SUPABASE_URL_ENV = 'NEXT_PUBLIC_SUPABASE_URL';
 const SUPABASE_PUBLIC_KEY_ENVS = ['NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'] as const;
-const SUPABASE_ADMIN_KEY_ENVS = ['SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'] as const;
 
 export function normalizeSupabaseUrl(value?: string) {
   if (!value) return undefined;
@@ -12,7 +11,7 @@ export function normalizeSupabaseUrl(value?: string) {
   }
 }
 
-function firstEnvValue(names: readonly string[]) {
+export function firstEnvValue(names: readonly string[]) {
   for (const name of names) {
     const value = process.env[name]?.trim();
     if (value) return value;
@@ -25,13 +24,6 @@ export function getSupabasePublicConfig() {
   return {
     url: normalizeSupabaseUrl(process.env[SUPABASE_URL_ENV]),
     publishableKey: firstEnvValue(SUPABASE_PUBLIC_KEY_ENVS)
-  };
-}
-
-export function getSupabaseAdminConfig() {
-  return {
-    url: normalizeSupabaseUrl(process.env[SUPABASE_URL_ENV]),
-    secretKey: firstEnvValue(SUPABASE_ADMIN_KEY_ENVS)
   };
 }
 
