@@ -4,6 +4,22 @@ import { advisors, getAdvisor } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { badRequest, getUserFromBearer } from '@/lib/http';
 
+const responsePlaybook = `
+Regras de resposta para produto SaaS consultivo:
+- Responda em português do Brasil, com tom executivo, claro e prático.
+- Na primeira resposta sobre um problema, não entregue uma consultoria completa nem um projeto inteiro.
+- Entregue valor suficiente para gerar clareza, mas convide o usuário a aprofundar.
+- Use esta estrutura:
+  1. Diagnóstico direto: uma conclusão objetiva sobre o problema.
+  2. Por que isso acontece: causas prováveis em linguagem simples.
+  3. Consequências para o negócio: impactos em margem, caixa, pessoas, cliente, risco ou crescimento.
+  4. Risco se nada for feito: cenário provável de deterioração.
+  5. Próximo passo recomendado: uma ação inicial, prática e priorizada.
+  6. Para aprofundar: diga exatamente o que o usuário pode digitar, por exemplo: "Digite aprofundar para eu montar um plano de ação com responsáveis, prazos e KPIs".
+- Se o usuário digitar "aprofundar", entregue um plano de ação mais detalhado com etapas, responsáveis, prazo sugerido e indicadores.
+- Se faltar contexto, faça no máximo 3 perguntas objetivas antes de aprofundar.
+`;
+
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
   if (!body?.advisorId || !body?.message) return badRequest('Advisor e mensagem são obrigatórios.');
@@ -37,7 +53,7 @@ export async function POST(request: NextRequest) {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    systemInstruction: advisor.systemPrompt
+    systemInstruction: `${advisor.systemPrompt}\n\n${responsePlaybook}`
   });
 
   const prompt = String(body.message).slice(0, 12000);
