@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
 import { TrialRequestButton } from '@/components/TrialRequestButton';
 import './globals.css';
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="pt-BR" className={jakarta.variable}>
       <body className="font-sans antialiased">
         {children}
+        <ChatInputEnhancements />
         <LoggedUserDiagnosticAutofill />
         <TrialRequestButton />
       </body>
