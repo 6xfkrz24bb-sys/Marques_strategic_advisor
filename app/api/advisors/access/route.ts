@@ -10,9 +10,9 @@ function parseEmailList(value?: string) {
     .filter(Boolean);
 }
 
-function userHasConfiguredAccess(email: string | undefined, envName: 'ADMIN_EMAILS' | 'TRIAL_EMAILS') {
+function isAdminEmail(email: string | undefined) {
   if (!email) return false;
-  return parseEmailList(process.env[envName]).includes(email.toLowerCase());
+  return parseEmailList(process.env.ADMIN_EMAILS).includes(email.toLowerCase());
 }
 
 export async function GET(request: NextRequest) {
@@ -21,12 +21,8 @@ export async function GET(request: NextRequest) {
 
   const allAdvisorIds = advisors.map((advisor) => advisor.id);
 
-  if (userHasConfiguredAccess(user.email, 'ADMIN_EMAILS')) {
+  if (isAdminEmail(user.email)) {
     return NextResponse.json({ ok: true, advisorIds: allAdvisorIds, accessType: 'admin' });
-  }
-
-  if (userHasConfiguredAccess(user.email, 'TRIAL_EMAILS')) {
-    return NextResponse.json({ ok: true, advisorIds: allAdvisorIds, accessType: 'trial' });
   }
 
   const supabase = createAdminClient();
