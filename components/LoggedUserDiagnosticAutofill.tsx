@@ -27,6 +27,49 @@ function clickFirstAdvisorDiagnostic() {
   }, 450);
 }
 
+function clickAdvisorPanel() {
+  const panelButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((button) => {
+    const text = button.textContent?.trim().toLowerCase();
+    return text === 'painel' || text === 'meus advisors';
+  });
+  panelButton?.click();
+}
+
+function ensureAdvisorPanelShortcut(isLogged: boolean) {
+  const existing = document.getElementById('advisor-panel-shortcut');
+  if (!isLogged) {
+    existing?.remove();
+    return;
+  }
+
+  Array.from(document.querySelectorAll<HTMLButtonElement>('button')).forEach((button) => {
+    if (button.textContent?.trim().toLowerCase() === 'painel') button.textContent = 'Meus advisors';
+  });
+
+  if (existing) return;
+
+  const button = document.createElement('button');
+  button.id = 'advisor-panel-shortcut';
+  button.type = 'button';
+  button.textContent = 'Meus advisors';
+  button.onclick = clickAdvisorPanel;
+  button.style.position = 'fixed';
+  button.style.right = '16px';
+  button.style.bottom = '18px';
+  button.style.zIndex = '60';
+  button.style.border = '1px solid rgba(255,255,255,0.16)';
+  button.style.background = 'rgba(15,23,42,0.96)';
+  button.style.color = '#f8fafc';
+  button.style.borderRadius = '999px';
+  button.style.padding = '14px 18px';
+  button.style.fontSize = '10px';
+  button.style.fontWeight = '900';
+  button.style.letterSpacing = '0.12em';
+  button.style.textTransform = 'uppercase';
+  button.style.boxShadow = '0 20px 40px rgba(0,0,0,0.35)';
+  document.body.appendChild(button);
+}
+
 function adjustMarketingCopy() {
   const footer = document.querySelector('footer');
   if (footer) {
@@ -62,6 +105,7 @@ export function LoggedUserDiagnosticAutofill() {
       adjustMarketingCopy();
       const { data } = await supabase.auth.getSession();
       const session = data.session;
+      ensureAdvisorPanelShortcut(Boolean(session?.user?.email));
       if (!session?.user?.email || stopped) return;
 
       const pageText = document.body.textContent?.toLowerCase() || '';
@@ -105,6 +149,7 @@ export function LoggedUserDiagnosticAutofill() {
     return () => {
       stopped = true;
       window.clearInterval(timer);
+      ensureAdvisorPanelShortcut(false);
       if (alertTimer) window.clearTimeout(alertTimer);
     };
   }, [supabase]);
