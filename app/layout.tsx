@@ -1,12 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
 import { TrialRequestButton } from '@/components/TrialRequestButton';
 import './globals.css';
-
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });
 
 export const metadata: Metadata = {
   title: 'Marques Strategic Advisor',
@@ -28,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="pt-BR" className={jakarta.variable}>
+    <html lang="pt-BR">
       <body className="font-sans antialiased">
         {children}
         <ChatInputEnhancements />
