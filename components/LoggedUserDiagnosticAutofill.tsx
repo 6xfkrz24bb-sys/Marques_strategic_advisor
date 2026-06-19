@@ -70,6 +70,57 @@ function ensureAdvisorPanelShortcut(isLogged: boolean) {
   document.body.appendChild(button);
 }
 
+function makeCardsClickable() {
+  const cards = Array.from(document.querySelectorAll<HTMLElement>('div.border'));
+  cards.forEach((card) => {
+    const text = card.textContent?.trim().toLowerCase() || '';
+    const isDiagnostic = text.startsWith('diagnóstico') && text.includes('comece gratuitamente');
+    const isActionPlan = text.startsWith('plano de ação') && text.includes('recomendações práticas');
+    const isAdvisorDemand = text.startsWith('advisor sob demanda') && text.includes('especialistas virtuais');
+
+    if (!isDiagnostic && !isActionPlan && !isAdvisorDemand) return;
+    if (card.dataset.shortcutReady === 'true') return;
+
+    card.dataset.shortcutReady = 'true';
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.style.cursor = 'pointer';
+    card.style.transition = 'border-color 180ms ease, transform 180ms ease, background 180ms ease';
+    card.style.position = 'relative';
+
+    const label = document.createElement('div');
+    label.textContent = isDiagnostic ? 'Iniciar diagnóstico →' : 'Ir para meus advisors →';
+    label.style.marginTop = '18px';
+    label.style.color = '#f59e0b';
+    label.style.fontSize = '10px';
+    label.style.fontWeight = '900';
+    label.style.letterSpacing = '0.12em';
+    label.style.textTransform = 'uppercase';
+    card.appendChild(label);
+
+    const action = () => {
+      if (isDiagnostic) clickFirstAdvisorDiagnostic();
+      else clickAdvisorPanel();
+    };
+
+    card.onclick = action;
+    card.onkeydown = (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        action();
+      }
+    };
+    card.onmouseenter = () => {
+      card.style.borderColor = 'rgba(245,158,11,0.65)';
+      card.style.transform = 'translateY(-2px)';
+    };
+    card.onmouseleave = () => {
+      card.style.borderColor = 'rgba(255,255,255,0.05)';
+      card.style.transform = 'translateY(0)';
+    };
+  });
+}
+
 function adjustMarketingCopy() {
   const footer = document.querySelector('footer');
   if (footer) {
@@ -103,6 +154,7 @@ export function LoggedUserDiagnosticAutofill() {
 
     async function handleLoggedUserDiagnostic() {
       adjustMarketingCopy();
+      makeCardsClickable();
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       ensureAdvisorPanelShortcut(Boolean(session?.user?.email));
