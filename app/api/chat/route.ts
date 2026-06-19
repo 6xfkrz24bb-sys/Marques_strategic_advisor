@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { advisors, getAdvisor } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { badRequest, getUserFromBearer } from '@/lib/http';
+import { isAdminEmail, monthStartIso, resolveMessageLimit, type AccessRow } from '@/lib/usage';
 
 const responsePlaybook = `
 Regras de resposta para produto SaaS consultivo:
@@ -32,19 +33,34 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+  const admin = isAdminEmail(user.email);
+  let usageNote = '';
 
-  if (!demoMode) {
-    const { data: access, error: accessError } = await supabase
+  if (!demoMode && !admin) {
+    const { data: rowsData, error: rowsError } = await supabase
       .from('advisor_access')
-      .select('advisor_id')
+      .select('advisor_id,expires_at')
       .eq('user_id', user.id)
-      .eq('advisor_id', advisor.id)
       .eq('status', 'active')
-      .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`)
-      .maybeSingle();
+      .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`);
 
-    if (accessError) return badRequest(accessError.message, 500);
-    if (!access) return badRequest('Advisor não contratado ou acesso expirado.', 403);
+    if (rowsError) return badRequest(rowsError.message, 500);
+    const rows = (rowsData || []) as AccessRow[];
+
+    if (!rows.some((row) => row.advisor_id === advisor.id)) return badRequest('Advisor não contratado ou acesso expirado.', 403);
+
+    const policy = resolveMessageLimit(rows);
+    const { count, error: countError } = await supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .eq('role', 'user')
+      .gte('created_at', monthStartIso());
+
+    if (countError) return badRequest(countError.message, 500);
+    const used = count || 0;
+    if (used >= policy.limit) return badRequest(`Limite atingido no ${policy.label}.`, 429);
+    usageNote = `\n\n---\nUso restante: ${Math.max(policy.limit - used - 1, 0)}/${policy.limit} (${policy.label}).`;
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
@@ -58,7 +74,7 @@ export async function POST(request: NextRequest) {
 
   const prompt = String(body.message).slice(0, 12000);
   const result = await model.generateContent(prompt);
-  const text = result.response.text() || 'Não consegui gerar resposta nesta tentativa.';
+  const text = `${result.response.text() || 'Não consegui gerar resposta nesta tentativa.'}${usageNote}`;
 
   await supabase.from('chat_messages').insert([
     { user_id: user.id, advisor_id: advisor.id, role: 'user', content: prompt },
