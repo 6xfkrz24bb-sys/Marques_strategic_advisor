@@ -10,13 +10,19 @@ type SpeechRecognition = EventTarget & {
   continuous: boolean;
   start: () => void;
   stop: () => void;
+  abort?: () => void;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onerror: (() => void) | null;
   onend: (() => void) | null;
 };
 
+type SpeechRecognitionResultItem = {
+  0: { transcript: string };
+  isFinal?: boolean;
+};
+
 type SpeechRecognitionEvent = {
-  results: ArrayLike<{ 0: { transcript: string } }>;
+  results: ArrayLike<SpeechRecognitionResultItem>;
 };
 
 declare global {
@@ -36,25 +42,39 @@ function setNativeInputValue(input: HTMLInputElement, value: string) {
 function appendToChatInput(text: string) {
   const input = document.querySelector<HTMLInputElement>('input[placeholder="Fazer consulta estratégica..."]');
   if (!input) return false;
-  const separator = input.value.trim() ? '\n\n' : '';
+  const separator = input.value.trim() ? ' ' : '';
   setNativeInputValue(input, `${input.value}${separator}${text}`);
   input.focus();
   return true;
 }
 
-function createButton(label: string) {
+function updateChatInput(baseText: string, text: string) {
+  const input = document.querySelector<HTMLInputElement>('input[placeholder="Fazer consulta estratégica..."]');
+  if (!input) return false;
+  const separator = baseText.trim() && text.trim() ? ' ' : '';
+  setNativeInputValue(input, `${baseText}${separator}${text}`);
+  input.focus();
+  return true;
+}
+
+function createButton(label: string, compact = false) {
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = label;
-  button.style.border = '1px solid rgba(255,255,255,0.12)';
-  button.style.background = 'rgba(255,255,255,0.04)';
+  button.style.border = '1px solid rgba(255,255,255,0.14)';
+  button.style.background = 'rgba(255,255,255,0.05)';
   button.style.color = '#f8fafc';
-  button.style.padding = '0 12px';
-  button.style.fontSize = '10px';
-  button.style.fontWeight = '800';
+  button.style.padding = compact ? '0 12px' : '0 14px';
+  button.style.fontSize = '11px';
+  button.style.fontWeight = '900';
   button.style.letterSpacing = '0.08em';
   button.style.textTransform = 'uppercase';
   button.style.minHeight = '44px';
+  button.style.whiteSpace = 'nowrap';
+  button.style.display = 'inline-flex';
+  button.style.alignItems = 'center';
+  button.style.justifyContent = 'center';
+  button.style.gap = '6px';
   return button;
 }
 
@@ -62,6 +82,15 @@ export function ChatInputEnhancements() {
   useEffect(() => {
     let recognition: SpeechRecognition | null = null;
     let isListening = false;
+    let baseTranscript = '';
+    let lastFinalTranscript = '';
+
+    function stopListening(micButton: HTMLButtonElement) {
+      isListening = false;
+      micButton.textContent = 'Falar';
+      micButton.style.borderColor = 'rgba(255,255,255,0.14)';
+      micButton.style.background = 'rgba(255,255,255,0.05)';
+    }
 
     function attachControls() {
       const input = document.querySelector<HTMLInputElement>('input[placeholder="Fazer consulta estratégica..."]');
@@ -74,44 +103,57 @@ export function ChatInputEnhancements() {
       fileInput.style.display = 'none';
       fileInput.dataset.chatEnhancement = 'true';
 
-      const micButton = createButton('🎙️');
+      const micButton = createButton('Falar');
       micButton.dataset.chatEnhancement = 'true';
       micButton.title = 'Falar por voz';
+      micButton.setAttribute('aria-label', 'Falar por voz');
 
-      const fileButton = createButton('📎');
+      const fileButton = createButton('Anexar', true);
       fileButton.dataset.chatEnhancement = 'true';
       fileButton.title = 'Anexar arquivo de texto, CSV, JSON ou Markdown';
+      fileButton.setAttribute('aria-label', 'Anexar arquivo');
 
       micButton.onclick = () => {
         const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!Recognition) {
-          appendToChatInput('Meu navegador não liberou ditado por voz neste dispositivo.');
+          appendToChatInput('Use o microfone do teclado do celular para ditar sua mensagem.');
           return;
         }
 
         if (isListening && recognition) {
           recognition.stop();
+          stopListening(micButton);
           return;
         }
 
         recognition = new Recognition();
         recognition.lang = 'pt-BR';
-        recognition.interimResults = false;
+        recognition.interimResults = true;
         recognition.continuous = false;
         isListening = true;
-        micButton.textContent = '⏹️';
+        baseTranscript = input.value.trim();
+        lastFinalTranscript = '';
+        micButton.textContent = 'Ouvindo...';
+        micButton.style.borderColor = 'rgba(245,158,11,0.75)';
+        micButton.style.background = 'rgba(245,158,11,0.18)';
 
         recognition.onresult = (event) => {
-          const transcript = Array.from(event.results).map((result) => result[0].transcript).join(' ');
-          appendToChatInput(transcript);
+          const pieces = Array.from(event.results).map((result) => result[0].transcript.trim()).filter(Boolean);
+          const transcript = pieces.join(' ').trim();
+          if (!transcript) return;
+          updateChatInput(baseTranscript, transcript);
+          lastFinalTranscript = transcript;
         };
+
         recognition.onerror = () => {
-          appendToChatInput('Não consegui capturar o áudio. Tente novamente ou digite a mensagem.');
+          stopListening(micButton);
+          if (!lastFinalTranscript) appendToChatInput('Não consegui capturar o áudio. Use o microfone do teclado ou digite a mensagem.');
         };
+
         recognition.onend = () => {
-          isListening = false;
-          micButton.textContent = '🎙️';
+          stopListening(micButton);
         };
+
         recognition.start();
       };
 
