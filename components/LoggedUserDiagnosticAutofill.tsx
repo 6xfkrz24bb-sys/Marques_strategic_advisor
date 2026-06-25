@@ -10,21 +10,11 @@ function setNativeInputValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function clickFirstAdvisorDiagnostic() {
+function openAdvisorSelection() {
   const advisorsNav = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
     (button) => button.textContent?.trim().toLowerCase() === 'advisors'
   );
   advisorsNav?.click();
-
-  window.setTimeout(() => {
-    const advisorSection = Array.from(document.querySelectorAll<HTMLElement>('section')).find((section) =>
-      section.textContent?.toLowerCase().includes('selecione seus advisors executivos')
-    );
-    const diagnosticButton = Array.from(advisorSection?.querySelectorAll<HTMLButtonElement>('button') || []).find((button) =>
-      button.textContent?.trim().toLowerCase() === 'diagnóstico'
-    );
-    diagnosticButton?.click();
-  }, 450);
 }
 
 function clickAdvisorPanel() {
@@ -89,7 +79,7 @@ function makeCardsClickable() {
     card.style.position = 'relative';
 
     const label = document.createElement('div');
-    label.textContent = isDiagnostic ? 'Iniciar diagnóstico →' : 'Ir para meus advisors →';
+    label.textContent = isDiagnostic ? 'Escolher advisor →' : 'Ir para meus advisors →';
     label.style.marginTop = '18px';
     label.style.color = '#f59e0b';
     label.style.fontSize = '10px';
@@ -99,7 +89,7 @@ function makeCardsClickable() {
     card.appendChild(label);
 
     const action = () => {
-      if (isDiagnostic) clickFirstAdvisorDiagnostic();
+      if (isDiagnostic) openAdvisorSelection();
       else clickAdvisorPanel();
     };
 
@@ -188,7 +178,7 @@ export function LoggedUserDiagnosticAutofill() {
       const pageText = document.body.textContent?.toLowerCase() || '';
       if (!supplierRedirected && pageText.includes('cadastro do novo usuário')) {
         supplierRedirected = true;
-        clickFirstAdvisorDiagnostic();
+        openAdvisorSelection();
         return;
       }
 
