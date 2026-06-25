@@ -139,6 +139,49 @@ $$ language plpgsql security definer;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
+create or replace function public.grant_trial_access(
+  target_email text,
+  trial_days integer default 15
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  insert into public.advisor_access (user_id, advisor_id, status, expires_at)
+  select
+    u.id,
+    advisor_id,
+    'active',
+    now() + make_interval(days => trial_days)
+  from auth.users u
+  cross join (
+    values
+      ('ceo'),
+      ('coo'),
+      ('financeiro'),
+      ('controller'),
+      ('pricing'),
+      ('comercial'),
+      ('marketing'),
+      ('supply-chain'),
+      ('logistica'),
+      ('procurement'),
+      ('juridico'),
+      ('rh'),
+      ('technology'),
+      ('risk-compliance'),
+      ('pmo')
+  ) as advisors(advisor_id)
+  where lower(u.email) = lower(target_email)
+  on conflict (user_id, advisor_id)
+  do update set
+    status = 'active',
+    expires_at = now() + make_interval(days => trial_days),
+    updated_at = now();
+end;
+$$;
+
 alter table public.profiles enable row level security;
 alter table public.leads enable row level security;
 alter table public.suppliers enable row level security;
