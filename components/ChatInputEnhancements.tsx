@@ -33,7 +33,7 @@ declare global {
 }
 
 const micIcon = `
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <path d="M12 14.5a3 3 0 0 0 3-3v-5a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M19 11.5a7 7 0 0 1-14 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M12 18.5v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -41,13 +41,13 @@ const micIcon = `
 `;
 
 const stopIcon = `
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor"/>
   </svg>
 `;
 
 const clipIcon = `
-  <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <path d="m21.4 11.6-8.7 8.7a6 6 0 0 1-8.5-8.5l9.4-9.4a4 4 0 0 1 5.7 5.7l-9.4 9.4a2 2 0 0 1-2.8-2.8l8.7-8.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>
 `;
@@ -87,17 +87,17 @@ function createIconButton(icon: string, label: string) {
   button.innerHTML = icon;
   button.title = label;
   button.setAttribute('aria-label', label);
-  button.style.border = '1px solid rgba(255,255,255,0.16)';
-  button.style.background = 'rgba(255,255,255,0.04)';
+  button.style.border = '1px solid rgba(255,255,255,0.14)';
+  button.style.background = 'rgba(255,255,255,0.035)';
   button.style.color = '#e5e7eb';
-  button.style.width = '46px';
-  button.style.minWidth = '46px';
-  button.style.height = '46px';
+  button.style.width = '38px';
+  button.style.minWidth = '38px';
+  button.style.height = '38px';
   button.style.padding = '0';
   button.style.display = 'inline-flex';
   button.style.alignItems = 'center';
   button.style.justifyContent = 'center';
-  button.style.flex = '0 0 46px';
+  button.style.flex = '0 0 38px';
   button.style.borderRadius = '0';
   button.style.cursor = 'pointer';
   button.style.boxSizing = 'border-box';
@@ -108,24 +108,29 @@ function alignChatForm(form: HTMLFormElement, input: HTMLInputElement) {
   const submitButton = Array.from(form.querySelectorAll<HTMLButtonElement>('button')).find((button) => button.type !== 'button');
 
   form.style.display = 'grid';
-  form.style.gridTemplateColumns = 'minmax(0,1fr) 46px 46px minmax(78px,96px)';
-  form.style.gap = '8px';
+  form.style.gridTemplateColumns = 'minmax(0,1fr) 38px 38px minmax(72px,84px)';
+  form.style.gap = '6px';
   form.style.alignItems = 'stretch';
   form.style.width = '100%';
   form.style.maxWidth = '100%';
+  form.style.minWidth = '0';
   form.style.overflow = 'hidden';
 
   input.style.minWidth = '0';
   input.style.width = '100%';
   input.style.boxSizing = 'border-box';
-  input.style.height = '46px';
+  input.style.height = '38px';
+  input.style.paddingLeft = '10px';
+  input.style.paddingRight = '10px';
 
   if (submitButton) {
     submitButton.style.width = '100%';
     submitButton.style.minWidth = '0';
-    submitButton.style.height = '46px';
-    submitButton.style.paddingLeft = '8px';
-    submitButton.style.paddingRight = '8px';
+    submitButton.style.height = '38px';
+    submitButton.style.paddingLeft = '6px';
+    submitButton.style.paddingRight = '6px';
+    submitButton.style.fontSize = '10px';
+    submitButton.style.letterSpacing = '0.12em';
     submitButton.style.boxSizing = 'border-box';
   }
 }
@@ -142,8 +147,8 @@ export function ChatInputEnhancements() {
       micButton.innerHTML = micIcon;
       micButton.title = 'Falar por voz';
       micButton.setAttribute('aria-label', 'Falar por voz');
-      micButton.style.borderColor = 'rgba(255,255,255,0.16)';
-      micButton.style.background = 'rgba(255,255,255,0.04)';
+      micButton.style.borderColor = 'rgba(255,255,255,0.14)';
+      micButton.style.background = 'rgba(255,255,255,0.035)';
       micButton.style.color = '#e5e7eb';
     }
 
@@ -189,8 +194,8 @@ export function ChatInputEnhancements() {
         micButton.innerHTML = stopIcon;
         micButton.title = 'Parar gravação';
         micButton.setAttribute('aria-label', 'Parar gravação');
-        micButton.style.borderColor = 'rgba(245,158,11,0.85)';
-        micButton.style.background = 'rgba(245,158,11,0.18)';
+        micButton.style.borderColor = 'rgba(245,158,11,0.75)';
+        micButton.style.background = 'rgba(245,158,11,0.14)';
         micButton.style.color = '#f59e0b';
 
         recognition.onresult = (event) => {
