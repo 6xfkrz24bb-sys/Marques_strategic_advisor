@@ -121,6 +121,30 @@ function makeCardsClickable() {
   });
 }
 
+function autoHideTrialMessages() {
+  const trialTexts = [
+    'acesso liberado por 15 dias',
+    'seu teste grátis já está ativo',
+    'você já possui acesso ativo aos advisors',
+    'teste grátis já utilizado neste cadastro'
+  ];
+
+  Array.from(document.querySelectorAll<HTMLElement>('div')).forEach((element) => {
+    const text = element.textContent?.trim().toLowerCase() || '';
+    const isTrialMessage = trialTexts.some((trialText) => text === trialText || text.includes(trialText));
+    const isButtonContainer = text.includes('teste grátis 15 dias') || text.includes('meus advisors');
+
+    if (!isTrialMessage || isButtonContainer || element.dataset.trialAutoHide === 'true') return;
+
+    element.dataset.trialAutoHide = 'true';
+    window.setTimeout(() => {
+      element.style.opacity = '0';
+      element.style.transition = 'opacity 250ms ease';
+      window.setTimeout(() => element.remove(), 300);
+    }, 4000);
+  });
+}
+
 function adjustMarketingCopy() {
   const footer = document.querySelector('footer');
   if (footer) {
@@ -155,6 +179,7 @@ export function LoggedUserDiagnosticAutofill() {
     async function handleLoggedUserDiagnostic() {
       adjustMarketingCopy();
       makeCardsClickable();
+      autoHideTrialMessages();
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       ensureAdvisorPanelShortcut(Boolean(session?.user?.email));
