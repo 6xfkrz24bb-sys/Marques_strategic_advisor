@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -17,8 +17,13 @@ function isAppleMobile() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
+function removeNavInstallButton() {
+  document.getElementById('pwa-install-nav-button')?.remove();
+}
+
 export function PWAInstallPrompt() {
-  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
+  const installEventRef = useRef<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showIosTip, setShowIosTip] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -33,13 +38,16 @@ export function PWAInstallPrompt() {
 
     const handleBeforeInstallPrompt = (event: Event) => {
       event.preventDefault();
-      setInstallEvent(event as BeforeInstallPromptEvent);
+      installEventRef.current = event as BeforeInstallPromptEvent;
+      setCanInstall(true);
     };
 
     const handleInstalled = () => {
       setIsInstalled(true);
-      setInstallEvent(null);
+      setCanInstall(false);
       setShowIosTip(false);
+      installEventRef.current = null;
+      removeNavInstallButton();
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -48,50 +56,70 @@ export function PWAInstallPrompt() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleInstalled);
+      removeNavInstallButton();
     };
   }, []);
 
-  async function handleInstallClick() {
-    if (installEvent) {
-      await installEvent.prompt();
-      const choice = await installEvent.userChoice.catch(() => null);
-      if (choice?.outcome === 'accepted') setIsInstalled(true);
-      setInstallEvent(null);
+  useEffect(() => {
+    if (isInstalled || dismissed || (!canInstall && !canShowIosTip)) {
+      removeNavInstallButton();
       return;
     }
 
-    if (canShowIosTip) {
-      setShowIosTip((current) => !current);
-      return;
-    }
-  }
+    const timer = window.setInterval(() => {
+      const signOutButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+        button.textContent?.trim().toLowerCase().includes('sair')
+      );
 
-  if (isInstalled || dismissed || (!installEvent && !canShowIosTip)) return null;
+      if (!signOutButton?.parentElement) return;
+      const existing = document.getElementById('pwa-install-nav-button') as HTMLButtonElement | null;
+      if (existing) return;
+
+      const button = document.createElement('button');
+      button.id = 'pwa-install-nav-button';
+      button.type = 'button';
+      button.textContent = 'App';
+      button.title = 'Instalar como app';
+      button.style.color = '#94a3b8';
+      button.style.fontSize = '9px';
+      button.style.fontWeight = '800';
+      button.style.letterSpacing = '0.14em';
+      button.style.textTransform = 'uppercase';
+      button.style.padding = '2px 0';
+      button.style.background = 'transparent';
+      button.style.border = '0';
+      button.style.cursor = 'pointer';
+      button.onmouseenter = () => { button.style.color = '#f59e0b'; };
+      button.onmouseleave = () => { button.style.color = '#94a3b8'; };
+      button.onclick = async () => {
+        const installEvent = installEventRef.current;
+        if (installEvent) {
+          await installEvent.prompt();
+          const choice = await installEvent.userChoice.catch(() => null);
+          installEventRef.current = null;
+          setCanInstall(false);
+          if (choice?.outcome === 'accepted') setIsInstalled(true);
+          else setDismissed(true);
+          return;
+        }
+
+        if (canShowIosTip) {
+          setShowIosTip(true);
+          window.setTimeout(() => setShowIosTip(false), 6000);
+        }
+      };
+
+      signOutButton.parentElement.insertBefore(button, signOutButton);
+    }, 700);
+
+    return () => window.clearInterval(timer);
+  }, [canInstall, canShowIosTip, dismissed, isInstalled]);
+
+  if (isInstalled || dismissed || !showIosTip) return null;
 
   return (
-    <div className="fixed right-4 top-[96px] z-50 max-w-[calc(100vw-2rem)] md:right-6 md:top-[92px]">
-      {showIosTip && (
-        <div className="mb-2 w-72 border border-amber-500/30 bg-slate-950/95 p-3 text-[11px] leading-relaxed text-amber-100 shadow-xl">
-          No iPhone, toque em Compartilhar e depois em Adicionar à Tela de Início.
-        </div>
-      )}
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={handleInstallClick}
-          className="rounded-full border border-amber-400/30 bg-slate-900/95 px-4 py-3 text-[10px] font-extrabold uppercase tracking-widest text-amber-400 shadow-xl transition hover:bg-slate-800"
-        >
-          Instalar app
-        </button>
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          aria-label="Fechar instalação do app"
-          className="rounded-full border border-white/10 bg-slate-900/95 px-3 py-3 text-[10px] font-extrabold text-slate-300 shadow-xl transition hover:bg-slate-800"
-        >
-          ×
-        </button>
-      </div>
+    <div className="fixed right-4 top-[86px] z-50 w-72 border border-amber-500/30 bg-slate-950/95 p-3 text-[11px] leading-relaxed text-amber-100 shadow-xl md:right-6">
+      No iPhone, toque em Compartilhar e depois em Adicionar à Tela de Início.
     </div>
   );
 }
