@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Marques Strategic Advisor">
+  <rect width="512" height="512" fill="#020617"/>
+  <circle cx="256" cy="256" r="218" fill="#0f172a"/>
+  <path d="M118 306L192 232L252 292L394 150" fill="none" stroke="#f59e0b" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M310 150H394V234" fill="none" stroke="#f59e0b" stroke-width="38" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="256" y="397" fill="#f8fafc" font-family="Arial, Helvetica, sans-serif" font-size="48" font-weight="800" text-anchor="middle" letter-spacing="7">MSA</text>
+</svg>
