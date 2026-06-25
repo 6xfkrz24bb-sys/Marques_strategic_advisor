@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { TrialRequestButton } from '@/components/TrialRequestButton';
 import './globals.css';
 
@@ -12,6 +13,12 @@ export const metadata: Metadata = {
   title: 'Marques Strategic Advisor',
   description: 'Consultoria executiva sob demanda com advisors especializados por pilar de gestão.',
   applicationName: 'Marques Advisor',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icons/marques-icon.svg',
+    shortcut: '/icons/marques-icon.svg',
+    apple: '/icons/marques-icon.svg'
+  },
   appleWebApp: {
     capable: true,
     title: 'Marques Advisor',
@@ -33,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {children}
         <ChatInputEnhancements />
         <LoggedUserDiagnosticAutofill />
+        <PWAInstallPrompt />
         <TrialRequestButton />
       </body>
     </html>
