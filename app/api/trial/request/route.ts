@@ -3,6 +3,11 @@ import { advisors } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { badRequest, getUserFromBearer } from '@/lib/http';
 
+type TrialAccessRow = {
+  advisor_id: string;
+  expires_at: string | null;
+};
+
 function parseEmailFrom(value?: string) {
   const fallbackEmail = 'no-reply@trial.mailersend.com';
   if (!value) return { email: fallbackEmail, name: 'Marques Strategic Advisor' };
@@ -27,6 +32,65 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#039;');
 }
 
+function hasFutureDate(value: string | null) {
+  if (!value) return false;
+  return new Date(value).getTime() > Date.now();
+}
+
+async function sendTrialNotification(params: {
+  adminEmail?: string;
+  mailerSendToken?: string;
+  from: { email: string; name: string };
+  userName: string;
+  userEmail: string;
+  message: string;
+  expiresAt: string;
+  leadError?: string;
+}) {
+  const { adminEmail, mailerSendToken, from, userName, userEmail, message, expiresAt, leadError } = params;
+  if (!adminEmail || !mailerSendToken) return false;
+
+  const subject = `Trial liberado automaticamente - ${userEmail}`;
+  const text = [
+    'Novo trial grátis liberado automaticamente por 15 dias.',
+    '',
+    `Nome: ${userName}`,
+    `E-mail: ${userEmail}`,
+    `Mensagem: ${message}`,
+    `Advisors liberados: ${advisors.length}`,
+    `Vencimento: ${expiresAt}`,
+    '',
+    leadError ? `Observação: o lead não foi salvo. Erro: ${leadError}` : 'Lead salvo no Supabase.'
+  ].join('\n');
+
+  const html = `
+    <h2>Trial grátis liberado automaticamente por 15 dias</h2>
+    <p><strong>Nome:</strong> ${escapeHtml(userName)}</p>
+    <p><strong>E-mail:</strong> ${escapeHtml(userEmail)}</p>
+    <p><strong>Mensagem:</strong> ${escapeHtml(message)}</p>
+    <p><strong>Advisors liberados:</strong> ${advisors.length}</p>
+    <p><strong>Vencimento:</strong> ${escapeHtml(expiresAt)}</p>
+    <p>${leadError ? `O lead não foi salvo: ${escapeHtml(leadError)}` : 'Lead salvo no Supabase.'}</p>
+  `;
+
+  const mailResponse = await fetch('https://api.mailersend.com/v1/email', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${mailerSendToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from,
+      to: [{ email: adminEmail, name: 'Mateus Marques' }],
+      subject,
+      text,
+      html
+    })
+  });
+
+  return mailResponse.ok;
+}
+
 export async function POST(request: NextRequest) {
   const user = await getUserFromBearer(request).catch(() => null);
   if (!user?.email) return badRequest('Faça login para solicitar o teste grátis.', 401);
@@ -40,6 +104,41 @@ export async function POST(request: NextRequest) {
   const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
 
   const supabase = createAdminClient();
+
+  const { data: existingAccess, error: existingAccessError } = await supabase
+    .from('advisor_access')
+    .select('advisor_id,expires_at')
+    .eq('user_id', user.id)
+    .eq('status', 'active');
+
+  if (existingAccessError) return badRequest(`Não foi possível consultar o acesso: ${existingAccessError.message}`, 500);
+
+  const rows = (existingAccess || []) as TrialAccessRow[];
+  const hasPermanentAccess = rows.some((row) => row.expires_at === null);
+  const hasActiveTrial = rows.some((row) => hasFutureDate(row.expires_at));
+  const hasExpiredTrial = rows.some((row) => row.expires_at !== null && !hasFutureDate(row.expires_at));
+
+  if (hasPermanentAccess) {
+    return NextResponse.json({
+      ok: true,
+      trialGranted: false,
+      alreadyHasAccess: true,
+      message: 'Você já possui acesso ativo aos advisors.'
+    });
+  }
+
+  if (hasActiveTrial) {
+    return NextResponse.json({
+      ok: true,
+      trialGranted: false,
+      alreadyHasAccess: true,
+      message: 'Seu teste grátis já está ativo.'
+    });
+  }
+
+  if (hasExpiredTrial) {
+    return badRequest('Teste grátis já utilizado neste cadastro.', 409);
+  }
 
   const { error: accessError } = await supabase.from('advisor_access').upsert(
     advisors.map((advisor) => ({
@@ -74,73 +173,22 @@ export async function POST(request: NextRequest) {
     ]
   });
 
-  if (!adminEmail || !mailerSendToken) {
-    return NextResponse.json({
-      ok: true,
-      trialGranted: true,
-      emailSent: false,
-      message: 'Teste grátis liberado por 15 dias. Notificação por e-mail não configurada.',
-      leadSaved: !leadError,
-      leadError: leadError?.message
-    });
-  }
-
-  const subject = `Trial liberado automaticamente - ${user.email}`;
-  const text = [
-    'Novo trial grátis liberado automaticamente por 15 dias.',
-    '',
-    `Nome: ${userName}`,
-    `E-mail: ${user.email}`,
-    `Mensagem: ${message}`,
-    `Advisors liberados: ${advisors.length}`,
-    `Vencimento: ${expiresAt}`,
-    '',
-    leadError ? `Observação: o lead não foi salvo. Erro: ${leadError.message}` : 'Lead salvo no Supabase.'
-  ].join('\n');
-
-  const html = `
-    <h2>Trial grátis liberado automaticamente por 15 dias</h2>
-    <p><strong>Nome:</strong> ${escapeHtml(userName)}</p>
-    <p><strong>E-mail:</strong> ${escapeHtml(user.email)}</p>
-    <p><strong>Mensagem:</strong> ${escapeHtml(message)}</p>
-    <p><strong>Advisors liberados:</strong> ${advisors.length}</p>
-    <p><strong>Vencimento:</strong> ${escapeHtml(expiresAt)}</p>
-    <p>${leadError ? `O lead não foi salvo: ${escapeHtml(leadError.message)}` : 'Lead salvo no Supabase.'}</p>
-  `;
-
-  const mailResponse = await fetch('https://api.mailersend.com/v1/email', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${mailerSendToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from,
-      to: [{ email: adminEmail, name: 'Mateus Marques' }],
-      subject,
-      text,
-      html
-    })
-  });
-
-  if (!mailResponse.ok) {
-    const details = await mailResponse.text().catch(() => '');
-    return NextResponse.json({
-      ok: true,
-      trialGranted: true,
-      emailSent: false,
-      message: 'Teste grátis liberado por 15 dias. O e-mail de notificação não foi enviado.',
-      details: details.slice(0, 500),
-      leadSaved: !leadError,
-      leadError: leadError?.message
-    });
-  }
+  const emailSent = await sendTrialNotification({
+    adminEmail,
+    mailerSendToken,
+    from,
+    userName,
+    userEmail: user.email,
+    message,
+    expiresAt,
+    leadError: leadError?.message
+  }).catch(() => false);
 
   return NextResponse.json({
     ok: true,
     trialGranted: true,
-    emailSent: true,
-    message: 'Teste grátis liberado por 15 dias. Você já pode acessar seus advisors.',
+    emailSent,
+    message: 'Acesso liberado por 15 dias.',
     leadSaved: !leadError,
     leadError: leadError?.message
   });
