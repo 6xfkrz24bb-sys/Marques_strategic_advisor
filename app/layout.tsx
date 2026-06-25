@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
+import { GoogleTag } from '@/components/GoogleTag';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { TrialRequestButton } from '@/components/TrialRequestButton';
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className={jakarta.variable}>
       <body className="font-sans antialiased">
+        <GoogleTag />
         {children}
         <ChatInputEnhancements />
         <LoggedUserDiagnosticAutofill />
