@@ -59,6 +59,10 @@ nav button:first-child span::after {
   text-transform: none;
 }
 
+nav > div {
+  transform: translateY(0.42rem);
+}
+
 @media (min-width: 390px) {
   nav button:first-child span::before {
     font-size: 0.75rem;
@@ -70,6 +74,10 @@ nav button:first-child span::after {
 }
 
 @media (min-width: 768px) {
+  nav > div {
+    transform: translateY(0.62rem);
+  }
+
   nav button:first-child span::before {
     font-size: 1rem;
   }
