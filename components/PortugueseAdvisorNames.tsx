@@ -30,7 +30,15 @@ const names = [
   ['Chief Technology Officer', 'Diretor de Tecnologia e IA'],
   ['Risk & Compliance', 'Riscos e Compliance'],
   ['PMO Advisor', 'PMO'],
-  ['Diretor de Projetos', 'Diretor de Projetos Estratégicos']
+  ['Diretor de Projetos', 'Diretor de Projetos Estratégicos'],
+  ['Cadastro do novo usuário', 'Peça seu diagnóstico']
+] as const;
+
+const copy = [
+  [
+    'Preencha como pessoa física ou pessoa jurídica. Use CPF para empresário individual/pessoa física e CNPJ para empresas constituídas. Os dados entram no funil de diagnóstico consultivo.',
+    'Conte rapidamente quem é você ou sua empresa e qual é o principal desafio de gestão. Com essas informações, o advisor prepara uma leitura inicial mais precisa e direcionada.'
+  ]
 ] as const;
 
 function applyPortugueseNames() {
@@ -42,6 +50,9 @@ function applyPortugueseNames() {
 
     const match = names.find(([current]) => current === text);
     if (match) element.textContent = match[1];
+
+    const copyMatch = copy.find(([current]) => current === text);
+    if (copyMatch) element.textContent = copyMatch[1];
   });
 }
 
