@@ -11,9 +11,9 @@ import './globals.css';
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });
 
 export const metadata: Metadata = {
-  title: 'Marques Strategic Advisor',
-  description: 'Consultoria executiva sob demanda com advisors especializados por pilar de gestão.',
-  applicationName: 'Marques Advisor',
+  title: 'MSA | Marques Advisors',
+  description: 'Consultoria estratégica sob demanda com advisors executivos para decisões críticas de gestão.',
+  applicationName: 'MSA',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: '/icons/marques-icon.svg',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'Marques Advisor',
+    title: 'MSA',
     statusBarStyle: 'black-translucent'
   }
 };
