@@ -85,6 +85,19 @@ function applyBusinessDiagnosticForm() {
   if (submitButton) submitButton.textContent = 'Enviar informações para diagnóstico';
 }
 
+function sendLoginSuccessToHome() {
+  const pageText = document.body.innerText.toLowerCase();
+  const hasLoginSuccess = pageText.includes('login realizado');
+  const isAdvisorPanel = pageText.includes('advisors contratados') || pageText.includes('nenhum advisor ativo');
+  if (!hasLoginSuccess || !isAdvisorPanel) return;
+
+  const brandButton = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+    button.textContent?.toLowerCase().includes('marques strategic advisor')
+  );
+
+  brandButton?.click();
+}
+
 function applyPortugueseNames() {
   const elements = document.querySelectorAll<HTMLElement>('h1,h2,h3,h4,p,span,button');
 
@@ -100,6 +113,7 @@ function applyPortugueseNames() {
   });
 
   applyBusinessDiagnosticForm();
+  sendLoginSuccessToHome();
 }
 
 export function PortugueseAdvisorNames() {
