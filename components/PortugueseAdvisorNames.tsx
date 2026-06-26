@@ -64,6 +64,8 @@ function applyBusinessDiagnosticForm() {
     return text.includes('peça seu diagnóstico') || text.includes('cadastro do novo usuário');
   });
 
+  document.getElementById('business-diagnostic-note')?.remove();
+
   if (!section) return;
 
   section.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach((field) => {
@@ -76,21 +78,6 @@ function applyBusinessDiagnosticForm() {
       field.style.resize = 'vertical';
     }
   });
-
-  const form = section.querySelector('form');
-  if (form && !document.getElementById('business-diagnostic-note')) {
-    const note = document.createElement('div');
-    note.id = 'business-diagnostic-note';
-    note.textContent = 'Não é um novo cadastro. Estas informações servem para conhecer o negócio, entender faturamento, estrutura, prioridades e calibrar o diagnóstico consultivo.';
-    note.style.border = '1px solid rgba(245,158,11,0.24)';
-    note.style.background = 'rgba(245,158,11,0.08)';
-    note.style.color = '#fde68a';
-    note.style.padding = '14px 16px';
-    note.style.margin = '0 0 18px 0';
-    note.style.fontSize = '11px';
-    note.style.lineHeight = '1.7';
-    form.parentElement?.insertBefore(note, form);
-  }
 
   const submitButton = Array.from(section.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
     button.textContent?.trim().toLowerCase() === 'solicitar diagnóstico'
