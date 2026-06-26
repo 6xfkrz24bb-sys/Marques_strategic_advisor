@@ -1,0 +1,20 @@
+{
+  "id": "/",
+  "name": "MSA | Marques Advisors",
+  "short_name": "MSA",
+  "description": "Consultoria Estratégica",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/marques-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
