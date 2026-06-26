@@ -28,7 +28,7 @@ nav button:first-child span {
 }
 
 nav button:first-child span::before {
-  content: "MSA - Marques Advisors";
+  content: "MSA \007C Marques Advisors";
   display: block;
   font-size: 0.82rem;
   font-weight: 800;
