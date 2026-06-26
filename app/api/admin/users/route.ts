@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   const [profilesResult, suppliersResult, leadsResult, accessResult, chatResult] = await Promise.all([
     supabase.from('profiles').select('id,full_name,email,created_at').order('created_at', { ascending: false }),
-    supabase.from('suppliers').select('user_id,legal_name,trade_name,email,whatsapp,created_at').order('created_at', { ascending: false }),
+    supabase.from('suppliers').select('user_id,legal_name,trade_name,email,whatsapp,city,state,category,contact_name,notes,created_at').order('created_at', { ascending: false }),
     supabase.from('leads').select('name,email,whatsapp,source,status,created_at').order('created_at', { ascending: false }),
     supabase.from('advisor_access').select('user_id,advisor_id,expires_at,status'),
     supabase.from('chat_messages').select('user_id,created_at').eq('role', 'user').order('created_at', { ascending: false })
@@ -91,33 +91,47 @@ export async function GET(request: NextRequest) {
     chatByUser.set(row.user_id, { count: current.count + 1, lastAt: current.lastAt || row.created_at });
   });
 
-  const users = Array.from(byEmail.values()).map((user: any) => {
+  const enrichedUsers = Array.from(byEmail.values()).map((user: any) => {
     const access = user.userId ? accessByUser.get(user.userId) || [] : [];
     const active = access.filter((row) => row.status === 'active');
     const permanent = active.some((row) => !row.expires_at);
     const trial = active.some((row) => row.expires_at && new Date(row.expires_at).getTime() >= Date.now());
-    const expiresAt = active.map((row) => row.expires_at).filter(Boolean).sort().at(-1) || null;
     const chat = user.userId ? chatByUser.get(user.userId) : null;
 
     return {
-      ...user,
+      name: user.name || user.email,
+      email: user.email,
+      createdAt: user.createdAt || null,
       accessStatus: permanent ? 'Acesso ativo' : trial ? 'Trial ativo' : active.length ? 'Acesso expirado' : 'Sem acesso',
-      advisors: active.length,
-      expiresAt,
+      source: user.source || 'Cadastro',
       messagesSent: chat?.count || 0,
-      lastChatAt: chat?.lastAt || null
+      hasBusinessForm: Boolean(user.businessName || user.businessSegment)
     };
   }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+  const diagnostics = (suppliersResult.data || []).map((diagnostic: any) => ({
+    legal_name: diagnostic.legal_name || '',
+    trade_name: diagnostic.trade_name || '',
+    email: diagnostic.email || '',
+    whatsapp: diagnostic.whatsapp || '',
+    city: diagnostic.city || '',
+    state: diagnostic.state || '',
+    category: diagnostic.category || '',
+    contact_name: diagnostic.contact_name || '',
+    notes: diagnostic.notes || '',
+    created_at: diagnostic.created_at || null
+  }));
 
   return NextResponse.json({
     ok: true,
     summary: {
-      totalUsers: users.length,
-      trialUsers: users.filter((user) => user.accessStatus === 'Trial ativo').length,
-      activeUsers: users.filter((user) => user.accessStatus === 'Acesso ativo').length,
-      usersWithChat: users.filter((user) => user.messagesSent > 0).length,
-      usersWithBusinessForm: users.filter((user) => user.businessName || user.businessSegment).length
+      totalUsers: enrichedUsers.length,
+      trialUsers: enrichedUsers.filter((user) => user.accessStatus === 'Trial ativo').length,
+      activeUsers: enrichedUsers.filter((user) => user.accessStatus === 'Acesso ativo').length,
+      usersWithChat: enrichedUsers.filter((user) => user.messagesSent > 0).length,
+      usersWithBusinessForm: enrichedUsers.filter((user) => user.hasBusinessForm).length
     },
-    users
+    users: enrichedUsers.map(({ hasBusinessForm, ...user }) => user),
+    diagnostics
   });
 }
