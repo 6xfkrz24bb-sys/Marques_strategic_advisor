@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { NavigationTopReset } from '@/components/NavigationTopReset';
 import { PortugueseAdvisorNames } from '@/components/PortugueseAdvisorNames';
 
 type BeforeInstallPromptEvent = Event & {
@@ -154,6 +155,7 @@ export function PWAInstallPrompt() {
 
   return (
     <>
+      <NavigationTopReset />
       <PortugueseAdvisorNames />
       {!isStandalone && guideMessage && (
         <div className="fixed right-4 top-[86px] z-50 w-72 border border-amber-500/30 bg-slate-950/95 p-3 text-[11px] leading-relaxed text-amber-100 shadow-xl md:right-6">
