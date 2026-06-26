@@ -37,9 +37,66 @@ const names = [
 const copy = [
   [
     'Preencha como pessoa física ou pessoa jurídica. Use CPF para empresário individual/pessoa física e CNPJ para empresas constituídas. Os dados entram no funil de diagnóstico consultivo.',
-    'Conte rapidamente quem é você ou sua empresa e qual é o principal desafio de gestão. Com essas informações, o advisor prepara uma leitura inicial mais precisa e direcionada.'
+    'Informe os dados do negócio para o advisor entender contexto, porte, estrutura e prioridades. Quanto mais claro o desafio, melhor será o diagnóstico.'
   ]
 ] as const;
+
+const placeholders = [
+  ['Nome completo ou razão social *', 'Empresa, negócio ou nome do responsável *'],
+  ['Nome fantasia ou marca', 'Segmento de atuação / tipo de negócio'],
+  ['CPF ou CNPJ *', 'Faturamento mensal ou anual *'],
+  ['Principal desafio', 'Principal objetivo do diagnóstico'],
+  ['Contato responsável', 'Estrutura organizacional / nº de colaboradores'],
+  ['E-mail *', 'E-mail do responsável *'],
+  ['WhatsApp', 'WhatsApp para contato'],
+  ['Cidade', 'Cidade / região de atuação'],
+  ['UF', 'UF / Estado'],
+  [
+    'Descreva o negócio, dores, objetivos, área crítica, faturamento aproximado ou contexto para o diagnóstico.',
+    'Descreva com detalhes as principais dores do negócio, objetivos, gargalos, área crítica, faturamento aproximado, estrutura atual e qualquer contexto que ajude o advisor a preparar um diagnóstico mais preciso.'
+  ]
+] as const;
+
+function applyBusinessDiagnosticForm() {
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('section'));
+  const section = sections.find((item) => {
+    const text = item.textContent?.toLowerCase() || '';
+    return text.includes('peça seu diagnóstico') || text.includes('cadastro do novo usuário');
+  });
+
+  if (!section) return;
+
+  section.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea').forEach((field) => {
+    const current = field.getAttribute('placeholder') || '';
+    const match = placeholders.find(([from]) => from === current);
+    if (match) field.setAttribute('placeholder', match[1]);
+
+    if (field instanceof HTMLTextAreaElement) {
+      field.style.minHeight = '190px';
+      field.style.resize = 'vertical';
+    }
+  });
+
+  const form = section.querySelector('form');
+  if (form && !document.getElementById('business-diagnostic-note')) {
+    const note = document.createElement('div');
+    note.id = 'business-diagnostic-note';
+    note.textContent = 'Não é um novo cadastro. Estas informações servem para conhecer o negócio, entender faturamento, estrutura, prioridades e calibrar o diagnóstico consultivo.';
+    note.style.border = '1px solid rgba(245,158,11,0.24)';
+    note.style.background = 'rgba(245,158,11,0.08)';
+    note.style.color = '#fde68a';
+    note.style.padding = '14px 16px';
+    note.style.margin = '0 0 18px 0';
+    note.style.fontSize = '11px';
+    note.style.lineHeight = '1.7';
+    form.parentElement?.insertBefore(note, form);
+  }
+
+  const submitButton = Array.from(section.querySelectorAll<HTMLButtonElement>('button')).find((button) =>
+    button.textContent?.trim().toLowerCase() === 'solicitar diagnóstico'
+  );
+  if (submitButton) submitButton.textContent = 'Enviar informações para diagnóstico';
+}
 
 function applyPortugueseNames() {
   const elements = document.querySelectorAll<HTMLElement>('h1,h2,h3,h4,p,span,button');
@@ -54,12 +111,14 @@ function applyPortugueseNames() {
     const copyMatch = copy.find(([current]) => current === text);
     if (copyMatch) element.textContent = copyMatch[1];
   });
+
+  applyBusinessDiagnosticForm();
 }
 
 export function PortugueseAdvisorNames() {
   useEffect(() => {
     applyPortugueseNames();
-    const timer = window.setInterval(applyPortugueseNames, 700);
+    const timer = window.setInterval(applyPortugueseNames, 400);
     return () => window.clearInterval(timer);
   }, []);
 
