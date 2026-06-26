@@ -20,7 +20,13 @@ input, textarea, select, button {
   font: inherit;
 }
 
+nav button:first-child {
+  flex-shrink: 0;
+}
+
 nav button:first-child span {
+  display: block;
+  min-width: max-content;
   font-size: 0 !important;
   letter-spacing: 0 !important;
   line-height: 1.05;
@@ -28,11 +34,12 @@ nav button:first-child span {
 }
 
 nav button:first-child span::before {
-  content: "MSA \007C Marques Advisors";
+  content: "MSA \00007C\0020 Marques Advisors";
   display: block;
-  font-size: 0.82rem;
+  white-space: nowrap;
+  font-size: 0.68rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.035em;
   line-height: 1.05;
   color: #f8fafc;
   text-transform: none;
@@ -41,14 +48,25 @@ nav button:first-child span::before {
 nav button:first-child span::after {
   content: "Consultoria Estratégica";
   display: block;
-  margin-top: 0.16rem;
-  font-size: 0.72rem;
+  margin-top: 0.12rem;
+  white-space: nowrap;
+  font-size: 0.58rem;
   font-style: italic;
   font-weight: 300;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   line-height: 1.1;
   color: #f8fafc;
   text-transform: none;
+}
+
+@media (min-width: 390px) {
+  nav button:first-child span::before {
+    font-size: 0.75rem;
+  }
+
+  nav button:first-child span::after {
+    font-size: 0.64rem;
+  }
 }
 
 @media (min-width: 768px) {
@@ -57,7 +75,7 @@ nav button:first-child span::after {
   }
 
   nav button:first-child span::after {
-    font-size: 0.88rem;
+    font-size: 0.84rem;
   }
 }
 
