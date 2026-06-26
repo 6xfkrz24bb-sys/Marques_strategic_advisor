@@ -20,6 +20,47 @@ input, textarea, select, button {
   font: inherit;
 }
 
+nav button:first-child span {
+  font-size: 0 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.05;
+  text-transform: none !important;
+}
+
+nav button:first-child span::before {
+  content: "MSA - Marques Advisors";
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: #f8fafc;
+  text-transform: none;
+}
+
+nav button:first-child span::after {
+  content: "Consultoria Estratégica";
+  display: block;
+  margin-top: 0.16rem;
+  font-size: 0.72rem;
+  font-style: italic;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  color: #f8fafc;
+  text-transform: none;
+}
+
+@media (min-width: 768px) {
+  nav button:first-child span::before {
+    font-size: 1rem;
+  }
+
+  nav button:first-child span::after {
+    font-size: 0.88rem;
+  }
+}
+
 .view-fade {
   animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
