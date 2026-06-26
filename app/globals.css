@@ -63,6 +63,12 @@ nav > div {
   transform: translateY(0.42rem);
 }
 
+@media (orientation: portrait) and (max-width: 767px) {
+  nav > div {
+    transform: translateY(1.05rem);
+  }
+}
+
 @media (min-width: 390px) {
   nav button:first-child span::before {
     font-size: 0.75rem;
