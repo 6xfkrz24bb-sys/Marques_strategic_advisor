@@ -131,10 +131,26 @@ nav > div {
   border: 0 !important;
   background: #020617 !important;
   padding: 1rem !important;
+  padding-top: max(1rem, env(safe-area-inset-top)) !important;
 }
 
 .msa-chat-expanded .msa-chat-messages {
   flex: 1 1 auto;
+}
+
+.msa-chat-expanded .msa-chat-expand-button {
+  position: fixed;
+  top: max(0.85rem, env(safe-area-inset-top));
+  right: max(0.85rem, env(safe-area-inset-right));
+  z-index: 90;
+  border-color: rgb(245 158 11 / 0.9);
+  background: rgb(245 158 11 / 0.98);
+  color: #020617;
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.45);
+}
+
+.msa-chat-expanded .msa-chat-header {
+  padding-right: 4rem;
 }
 
 @media (orientation: portrait) and (max-width: 767px) {
@@ -162,6 +178,21 @@ nav > div {
 
   .msa-chat-expand-button span {
     font-size: 1.32rem;
+  }
+
+  .msa-chat-expanded {
+    padding-top: max(0.85rem, env(safe-area-inset-top)) !important;
+  }
+
+  .msa-chat-expanded .msa-chat-expand-button {
+    top: max(0.85rem, env(safe-area-inset-top));
+    right: max(0.85rem, env(safe-area-inset-right));
+    height: 2.7rem;
+    width: 2.7rem;
+  }
+
+  .msa-chat-expanded .msa-chat-header {
+    padding-right: 3.75rem;
   }
 }
 
