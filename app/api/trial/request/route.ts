@@ -5,6 +5,7 @@ import { badRequest, getUserFromBearer } from '@/lib/http';
 
 type TrialAccessRow = {
   advisor_id: string;
+  status: string;
   expires_at: string | null;
 };
 
@@ -35,6 +36,20 @@ function escapeHtml(value: string) {
 function hasFutureDate(value: string | null) {
   if (!value) return false;
   return new Date(value).getTime() > Date.now();
+}
+
+function isActiveAccess(row: TrialAccessRow) {
+  return row.status === 'active' && (row.expires_at === null || hasFutureDate(row.expires_at));
+}
+
+async function getUserAccessRows(userId: string) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('advisor_access')
+    .select('advisor_id,status,expires_at')
+    .eq('user_id', userId);
+
+  return { supabase, rows: (data || []) as TrialAccessRow[], error };
 }
 
 async function sendTrialNotification(params: {
@@ -91,6 +106,32 @@ async function sendTrialNotification(params: {
   return mailResponse.ok;
 }
 
+export async function GET(request: NextRequest) {
+  const user = await getUserFromBearer(request).catch(() => null);
+
+  if (!user?.email) {
+    return NextResponse.json({
+      ok: true,
+      trialAvailable: true,
+      hasRequestedTrial: false,
+      alreadyHasAccess: false
+    });
+  }
+
+  const { rows, error } = await getUserAccessRows(user.id);
+  if (error) return badRequest(`Não foi possível consultar o acesso: ${error.message}`, 500);
+
+  const hasRequestedTrial = rows.length > 0;
+  const alreadyHasAccess = rows.some(isActiveAccess);
+
+  return NextResponse.json({
+    ok: true,
+    trialAvailable: !hasRequestedTrial,
+    hasRequestedTrial,
+    alreadyHasAccess
+  });
+}
+
 export async function POST(request: NextRequest) {
   const user = await getUserFromBearer(request).catch(() => null);
   if (!user?.email) return badRequest('Faça login para solicitar o teste grátis.', 401);
@@ -103,26 +144,21 @@ export async function POST(request: NextRequest) {
   const message = String(body?.message || 'Solicitação de trial grátis por 15 dias.').slice(0, 2000);
   const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
 
-  const supabase = createAdminClient();
-
-  const { data: existingAccess, error: existingAccessError } = await supabase
-    .from('advisor_access')
-    .select('advisor_id,expires_at')
-    .eq('user_id', user.id)
-    .eq('status', 'active');
+  const { supabase, rows, error: existingAccessError } = await getUserAccessRows(user.id);
 
   if (existingAccessError) return badRequest(`Não foi possível consultar o acesso: ${existingAccessError.message}`, 500);
 
-  const rows = (existingAccess || []) as TrialAccessRow[];
-  const hasPermanentAccess = rows.some((row) => row.expires_at === null);
-  const hasActiveTrial = rows.some((row) => hasFutureDate(row.expires_at));
-  const hasExpiredTrial = rows.some((row) => row.expires_at !== null && !hasFutureDate(row.expires_at));
+  const hasPermanentAccess = rows.some((row) => row.status === 'active' && row.expires_at === null);
+  const hasActiveTrial = rows.some((row) => row.status === 'active' && hasFutureDate(row.expires_at));
+  const hasRequestedTrial = rows.length > 0;
 
   if (hasPermanentAccess) {
     return NextResponse.json({
       ok: true,
       trialGranted: false,
       alreadyHasAccess: true,
+      hasRequestedTrial: true,
+      trialAvailable: false,
       message: 'Você já possui acesso ativo aos advisors.'
     });
   }
@@ -132,12 +168,23 @@ export async function POST(request: NextRequest) {
       ok: true,
       trialGranted: false,
       alreadyHasAccess: true,
+      hasRequestedTrial: true,
+      trialAvailable: false,
       message: 'Seu teste grátis já está ativo.'
     });
   }
 
-  if (hasExpiredTrial) {
-    return badRequest('Teste grátis já utilizado neste cadastro.', 409);
+  if (hasRequestedTrial) {
+    return NextResponse.json(
+      {
+        ok: false,
+        trialGranted: false,
+        hasRequestedTrial: true,
+        trialAvailable: false,
+        error: 'Teste grátis já utilizado neste cadastro.'
+      },
+      { status: 409 }
+    );
   }
 
   const { error: accessError } = await supabase.from('advisor_access').upsert(
@@ -187,6 +234,8 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     ok: true,
     trialGranted: true,
+    hasRequestedTrial: true,
+    trialAvailable: false,
     emailSent,
     message: 'Acesso liberado por 15 dias.',
     leadSaved: !leadError,
