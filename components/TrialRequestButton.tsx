@@ -9,12 +9,49 @@ export function TrialRequestButton() {
   const [session, setSession] = useState<Session | null>(null);
   const [message, setMessage] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [shouldShowButton, setShouldShowButton] = useState(true);
+  const [hasCheckedTrial, setHasCheckedTrial] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkTrialAvailability() {
+      setHasCheckedTrial(false);
+
+      if (!session?.access_token) {
+        setShouldShowButton(true);
+        setHasCheckedTrial(true);
+        return;
+      }
+
+      const response = await fetch('/api/trial/request', {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      }).catch(() => null);
+      const json = await response?.json().catch(() => null);
+
+      if (cancelled) return;
+
+      if (json?.ok) {
+        setShouldShowButton(Boolean(json.trialAvailable));
+      } else {
+        setShouldShowButton(true);
+      }
+
+      setHasCheckedTrial(true);
+    }
+
+    void checkTrialAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token]);
 
   async function requestTrial() {
     if (!session?.access_token) {
@@ -35,14 +72,21 @@ export function TrialRequestButton() {
         body: JSON.stringify({ message: 'Solicitação feita pelo botão de trial grátis do site.' })
       });
       const json = await response.json().catch(() => null);
-      if (!response.ok || !json?.ok) throw new Error(json?.error || 'Não foi possível registrar a solicitação.');
-      setMessage(json.message || 'Solicitação recebida. Liberação em até 24 horas.');
+      if (!response.ok || !json?.ok) {
+        if (json?.trialAvailable === false || json?.hasRequestedTrial) setShouldShowButton(false);
+        throw new Error(json?.error || 'Não foi possível registrar a solicitação.');
+      }
+      setShouldShowButton(false);
+      setMessage(json.message || 'Acesso liberado por 15 dias.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Erro ao solicitar teste grátis.');
     } finally {
       setIsBusy(false);
     }
   }
+
+  if (session && !hasCheckedTrial) return null;
+  if (!shouldShowButton && !message) return null;
 
   return (
     <div className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] md:bottom-6 md:left-6">
@@ -51,14 +95,16 @@ export function TrialRequestButton() {
           {message}
         </div>
       )}
-      <button
-        type="button"
-        onClick={requestTrial}
-        disabled={isBusy}
-        className="rounded-full border border-amber-400/30 bg-amber-500 px-5 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-950 shadow-xl transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isBusy ? 'Enviando...' : 'Teste grátis 15 dias'}
-      </button>
+      {shouldShowButton && (
+        <button
+          type="button"
+          onClick={requestTrial}
+          disabled={isBusy}
+          className="rounded-full border border-amber-400/30 bg-amber-500 px-5 py-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-950 shadow-xl transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isBusy ? 'Enviando...' : 'Teste grátis 15 dias'}
+        </button>
+      )}
     </div>
   );
 }
