@@ -75,7 +75,7 @@ nav > div {
 
 .msa-chat-header {
   position: relative;
-  padding-right: 11rem;
+  padding-right: 3.7rem;
 }
 
 .msa-chat-messages {
@@ -88,19 +88,37 @@ nav > div {
   position: absolute;
   right: 0;
   top: 0;
-  border: 1px solid rgb(255 255 255 / 0.1);
-  padding: 0.65rem 0.9rem;
-  font-size: 0.58rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  display: inline-flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(245 158 11 / 0.55);
+  border-radius: 999px;
   color: #f59e0b;
-  background: rgb(15 23 42 / 0.9);
+  background: rgb(2 6 23 / 0.92);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.04), 0 10px 28px rgb(0 0 0 / 0.25);
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+.msa-chat-expand-button span {
+  display: block;
+  transform: translateY(-0.02rem);
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .msa-chat-expand-button:hover {
-  background: rgb(255 255 255 / 0.06);
+  transform: translateY(-1px);
+  border-color: #fbbf24;
+  background: rgb(15 23 42 / 0.98);
   color: #fbbf24;
+}
+
+.msa-chat-expand-button.is-expanded {
+  border-color: rgb(255 255 255 / 0.24);
+  color: #f8fafc;
 }
 
 .msa-chat-expanded {
@@ -131,15 +149,19 @@ nav > div {
   }
 
   .msa-chat-header {
-    padding-right: 0;
-    padding-bottom: 3.1rem;
+    padding-right: 3.35rem;
+    padding-bottom: 0.75rem;
   }
 
   .msa-chat-expand-button {
-    bottom: 0.75rem;
-    left: 0;
-    right: auto;
-    top: auto;
+    top: 0.1rem;
+    right: 0;
+    height: 2.55rem;
+    width: 2.55rem;
+  }
+
+  .msa-chat-expand-button span {
+    font-size: 1.32rem;
   }
 }
 
