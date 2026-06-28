@@ -15,13 +15,49 @@ function setExpandButtonState(button: HTMLButtonElement, expanded: boolean) {
   button.classList.toggle('is-expanded', expanded);
   button.title = expanded ? 'Voltar ao painel' : 'Expandir conversa';
   button.setAttribute('aria-label', expanded ? 'Voltar ao painel' : 'Expandir conversa');
-  button.innerHTML = `<span aria-hidden="true">${expanded ? '⤡' : '⤢'}</span>`;
+  button.textContent = expanded ? '⤡' : '⤢';
 }
 
 export function ChatViewportEnhancer() {
   useEffect(() => {
     let messagesObserver: MutationObserver | null = null;
     let activeMessages: HTMLElement | null = null;
+    let activeShell: HTMLElement | null = null;
+    let activeHeader: HTMLElement | null = null;
+    let lastMessageCount = -1;
+    let rafId = 0;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'msa-chat-floating-button';
+    setExpandButtonState(button, false);
+    document.body.appendChild(button);
+
+    function syncButtonPosition() {
+      window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(() => {
+        if (!activeShell || !activeHeader) {
+          button.classList.remove('is-visible');
+          return;
+        }
+
+        const expanded = activeShell.classList.contains('msa-chat-expanded');
+        setExpandButtonState(button, expanded);
+        button.classList.add('is-visible');
+
+        if (expanded) {
+          button.style.top = '';
+          button.style.left = '';
+          button.style.right = '';
+          return;
+        }
+
+        const rect = activeHeader.getBoundingClientRect();
+        button.style.top = `${Math.max(rect.top + 2, 12)}px`;
+        button.style.left = `${Math.min(rect.right - 46, window.innerWidth - 58)}px`;
+        button.style.right = 'auto';
+      });
+    }
 
     function attachChatControls() {
       const input = document.querySelector<HTMLInputElement>(`input[placeholder="${CHAT_INPUT_PLACEHOLDER}"]`);
@@ -30,43 +66,58 @@ export function ChatViewportEnhancer() {
       const messages = form?.previousElementSibling as HTMLElement | null;
       const header = messages?.previousElementSibling as HTMLElement | null;
 
-      if (!form || !shell || !messages || !header) return;
+      if (!form || !shell || !messages || !header) {
+        activeShell = null;
+        activeHeader = null;
+        syncButtonPosition();
+        return;
+      }
 
+      activeShell = shell;
+      activeHeader = header;
       shell.classList.add('msa-chat-shell');
       messages.classList.add('msa-chat-messages');
       header.classList.add('msa-chat-header');
 
-      if (!header.querySelector('.msa-chat-expand-button')) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'msa-chat-expand-button';
-        setExpandButtonState(button, shell.classList.contains('msa-chat-expanded'));
-        button.addEventListener('click', () => {
-          const expanded = shell.classList.toggle('msa-chat-expanded');
-          document.body.classList.toggle('msa-chat-lock', expanded);
-          setExpandButtonState(button, expanded);
-          scrollConversationToBottom(messages, 'auto');
-        });
-        header.appendChild(button);
-      }
-
       if (activeMessages !== messages) {
         messagesObserver?.disconnect();
         activeMessages = messages;
+        lastMessageCount = messages.children.length;
         scrollConversationToBottom(messages, 'auto');
-        messagesObserver = new MutationObserver(() => scrollConversationToBottom(messages));
-        messagesObserver.observe(messages, { childList: true, subtree: true });
+        messagesObserver = new MutationObserver(() => {
+          const nextCount = messages.children.length;
+          if (nextCount !== lastMessageCount) {
+            lastMessageCount = nextCount;
+            scrollConversationToBottom(messages);
+          }
+        });
+        messagesObserver.observe(messages, { childList: true });
       }
+
+      syncButtonPosition();
     }
 
-    attachChatControls();
+    button.addEventListener('click', () => {
+      if (!activeShell) return;
+      const expanded = activeShell.classList.toggle('msa-chat-expanded');
+      document.body.classList.toggle('msa-chat-lock', expanded);
+      setExpandButtonState(button, expanded);
+      syncButtonPosition();
+      scrollConversationToBottom(activeMessages, 'auto');
+    });
 
-    const appObserver = new MutationObserver(() => attachChatControls());
-    appObserver.observe(document.body, { childList: true, subtree: true });
+    attachChatControls();
+    const finder = window.setInterval(attachChatControls, 700);
+    window.addEventListener('resize', syncButtonPosition);
+    window.addEventListener('scroll', syncButtonPosition, { passive: true });
 
     return () => {
-      appObserver.disconnect();
+      window.clearInterval(finder);
+      window.cancelAnimationFrame(rafId);
+      window.removeEventListener('resize', syncButtonPosition);
+      window.removeEventListener('scroll', syncButtonPosition);
       messagesObserver?.disconnect();
+      button.remove();
       document.body.classList.remove('msa-chat-lock');
     };
   }, []);
