@@ -16,6 +16,10 @@ body {
   color: #e2e8f0;
 }
 
+body.msa-chat-lock {
+  overflow: hidden;
+}
+
 input, textarea, select, button {
   font: inherit;
 }
@@ -63,9 +67,79 @@ nav > div {
   transform: translateY(0.42rem);
 }
 
+.msa-chat-shell {
+  height: min(760px, 72dvh);
+  min-height: 520px;
+  max-height: 760px;
+}
+
+.msa-chat-header {
+  position: relative;
+  padding-right: 11rem;
+}
+
+.msa-chat-messages {
+  min-height: 0;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+.msa-chat-expand-button {
+  position: absolute;
+  right: 0;
+  top: 0;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  padding: 0.65rem 0.9rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #f59e0b;
+  background: rgb(15 23 42 / 0.9);
+}
+
+.msa-chat-expand-button:hover {
+  background: rgb(255 255 255 / 0.06);
+  color: #fbbf24;
+}
+
+.msa-chat-expanded {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 60 !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border: 0 !important;
+  background: #020617 !important;
+  padding: 1rem !important;
+}
+
+.msa-chat-expanded .msa-chat-messages {
+  flex: 1 1 auto;
+}
+
 @media (orientation: portrait) and (max-width: 767px) {
   nav > div {
     transform: translateY(1.05rem);
+  }
+
+  .msa-chat-shell {
+    height: calc(100dvh - 8rem);
+    min-height: 460px;
+    max-height: none;
+  }
+
+  .msa-chat-header {
+    padding-right: 0;
+    padding-bottom: 3.1rem;
+  }
+
+  .msa-chat-expand-button {
+    bottom: 0.75rem;
+    left: 0;
+    right: auto;
+    top: auto;
   }
 }
 
