@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 const CHAT_INPUT_PLACEHOLDER = 'Fazer consulta estratégica...';
+const EXPAND_ICON = '⤢';
 
 function scrollConversationToBottom(messages: HTMLElement | null, behavior: ScrollBehavior = 'smooth') {
   if (!messages) return;
@@ -15,7 +16,7 @@ function setExpandButtonState(button: HTMLButtonElement, expanded: boolean) {
   button.classList.toggle('is-expanded', expanded);
   button.title = expanded ? 'Voltar ao painel' : 'Expandir conversa';
   button.setAttribute('aria-label', expanded ? 'Voltar ao painel' : 'Expandir conversa');
-  button.textContent = expanded ? '⤡' : '⤢';
+  button.textContent = EXPAND_ICON;
 }
 
 export function ChatViewportEnhancer() {
