@@ -68,6 +68,7 @@ nav > div {
 }
 
 .msa-chat-shell {
+  position: relative;
   height: min(760px, 72dvh);
   min-height: 520px;
   max-height: 760px;
@@ -84,11 +85,10 @@ nav > div {
   overscroll-behavior: contain;
 }
 
-.msa-chat-expand-button {
-  position: absolute;
-  right: 0;
-  top: 0;
-  display: inline-flex;
+.msa-chat-floating-button {
+  position: fixed;
+  z-index: 90;
+  display: none;
   height: 2.75rem;
   width: 2.75rem;
   align-items: center;
@@ -98,27 +98,31 @@ nav > div {
   color: #f59e0b;
   background: rgb(2 6 23 / 0.92);
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.04), 0 10px 28px rgb(0 0 0 / 0.25);
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
-}
-
-.msa-chat-expand-button span {
-  display: block;
-  transform: translateY(-0.02rem);
   font-size: 1.45rem;
   font-weight: 800;
   line-height: 1;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
 
-.msa-chat-expand-button:hover {
+.msa-chat-floating-button.is-visible {
+  display: inline-flex;
+}
+
+.msa-chat-floating-button:hover {
   transform: translateY(-1px);
   border-color: #fbbf24;
   background: rgb(15 23 42 / 0.98);
   color: #fbbf24;
 }
 
-.msa-chat-expand-button.is-expanded {
-  border-color: rgb(255 255 255 / 0.24);
-  color: #f8fafc;
+.msa-chat-floating-button.is-expanded {
+  top: max(0.85rem, env(safe-area-inset-top)) !important;
+  right: max(0.85rem, env(safe-area-inset-right)) !important;
+  left: auto !important;
+  border-color: rgb(245 158 11 / 0.9);
+  background: rgb(245 158 11 / 0.98);
+  color: #020617;
+  box-shadow: 0 14px 36px rgb(0 0 0 / 0.45);
 }
 
 .msa-chat-expanded {
@@ -136,17 +140,6 @@ nav > div {
 
 .msa-chat-expanded .msa-chat-messages {
   flex: 1 1 auto;
-}
-
-.msa-chat-expanded .msa-chat-expand-button {
-  position: fixed;
-  top: max(0.85rem, env(safe-area-inset-top));
-  right: max(0.85rem, env(safe-area-inset-right));
-  z-index: 90;
-  border-color: rgb(245 158 11 / 0.9);
-  background: rgb(245 158 11 / 0.98);
-  color: #020617;
-  box-shadow: 0 14px 36px rgb(0 0 0 / 0.45);
 }
 
 .msa-chat-expanded .msa-chat-header {
@@ -169,26 +162,21 @@ nav > div {
     padding-bottom: 0.75rem;
   }
 
-  .msa-chat-expand-button {
-    top: 0.1rem;
-    right: 0;
+  .msa-chat-floating-button {
     height: 2.55rem;
     width: 2.55rem;
+    font-size: 1.32rem;
   }
 
-  .msa-chat-expand-button span {
-    font-size: 1.32rem;
+  .msa-chat-floating-button.is-expanded {
+    top: max(0.85rem, env(safe-area-inset-top)) !important;
+    right: max(0.85rem, env(safe-area-inset-right)) !important;
+    height: 2.7rem;
+    width: 2.7rem;
   }
 
   .msa-chat-expanded {
     padding-top: max(0.85rem, env(safe-area-inset-top)) !important;
-  }
-
-  .msa-chat-expanded .msa-chat-expand-button {
-    top: max(0.85rem, env(safe-area-inset-top));
-    right: max(0.85rem, env(safe-area-inset-right));
-    height: 2.7rem;
-    width: 2.7rem;
   }
 
   .msa-chat-expanded .msa-chat-header {
@@ -221,10 +209,10 @@ nav > div {
 }
 
 .view-fade {
-  animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeIn 0.25s ease both;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
