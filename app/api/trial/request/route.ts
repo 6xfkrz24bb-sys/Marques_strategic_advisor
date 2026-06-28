@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { advisors } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
+import { cleanString, optionalString } from '@/lib/api-validation';
 
 type TrialAccessRow = {
   advisor_id: string;
@@ -40,6 +41,18 @@ function hasFutureDate(value: string | null) {
 
 function isActiveAccess(row: TrialAccessRow) {
   return row.status === 'active' && (row.expires_at === null || hasFutureDate(row.expires_at));
+}
+
+
+async function hasPriorTrialLead(email: string) {
+  const supabase = createAdminClient();
+  const { count, error } = await supabase
+    .from('leads')
+    .select('id', { count: 'exact', head: true })
+    .eq('source', 'trial_request')
+    .eq('email', email);
+
+  return { hasPriorTrial: Boolean(count && count > 0), error };
 }
 
 async function getUserAccessRows(userId: string) {
@@ -119,9 +132,11 @@ export async function GET(request: NextRequest) {
   }
 
   const { rows, error } = await getUserAccessRows(user.id);
-  if (error) return badRequest(`Não foi possível consultar o acesso: ${error.message}`, 500);
+  if (error) return serverError('Não foi possível consultar o acesso ao trial agora.');
+  const priorTrial = await hasPriorTrialLead(user.email).catch(() => ({ hasPriorTrial: false, error: null }));
+  if (priorTrial.error) return serverError('Não foi possível consultar o acesso ao trial agora.');
 
-  const hasRequestedTrial = rows.length > 0;
+  const hasRequestedTrial = rows.length > 0 || priorTrial.hasPriorTrial;
   const alreadyHasAccess = rows.some(isActiveAccess);
 
   return NextResponse.json({
@@ -140,17 +155,20 @@ export async function POST(request: NextRequest) {
   const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
   const mailerSendToken = process.env.MAILERSEND_API_TOKEN;
   const from = parseEmailFrom(process.env.EMAIL_FROM);
-  const userName = String(user.user_metadata?.full_name || body?.name || user.email.split('@')[0] || 'Usuário logado');
-  const message = String(body?.message || 'Solicitação de trial grátis por 15 dias.').slice(0, 2000);
+  const userName = cleanString(user.user_metadata?.full_name || body?.name || user.email.split('@')[0] || 'Usuário logado', 160) || 'Usuário logado';
+  const message = cleanString(body?.message || 'Solicitação de trial grátis por 15 dias.', 2000) || 'Solicitação de trial grátis por 15 dias.';
   const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
 
   const { supabase, rows, error: existingAccessError } = await getUserAccessRows(user.id);
 
-  if (existingAccessError) return badRequest(`Não foi possível consultar o acesso: ${existingAccessError.message}`, 500);
+  if (existingAccessError) return serverError('Não foi possível validar seu acesso agora.');
+
+  const priorTrial = await hasPriorTrialLead(user.email).catch(() => ({ hasPriorTrial: false, error: null }));
+  if (priorTrial.error) return serverError('Não foi possível validar seu acesso agora.');
 
   const hasPermanentAccess = rows.some((row) => row.status === 'active' && row.expires_at === null);
   const hasActiveTrial = rows.some((row) => row.status === 'active' && hasFutureDate(row.expires_at));
-  const hasRequestedTrial = rows.length > 0;
+  const hasRequestedTrial = rows.length > 0 || priorTrial.hasPriorTrial;
 
   if (hasPermanentAccess) {
     return NextResponse.json({
@@ -199,14 +217,14 @@ export async function POST(request: NextRequest) {
   );
 
   if (accessError) {
-    return badRequest(`Não foi possível liberar o teste grátis: ${accessError.message}`, 500);
+    return serverError('Não foi possível liberar o teste grátis agora.');
   }
 
   const { error: leadError } = await supabase.from('leads').insert({
     name: userName,
     email: user.email,
-    whatsapp: body?.whatsapp || null,
-    company: body?.company || null,
+    whatsapp: optionalString(body?.whatsapp, 60),
+    company: optionalString(body?.company, 160),
     source: 'trial_request',
     status: 'trial_granted',
     answers: [
@@ -228,7 +246,7 @@ export async function POST(request: NextRequest) {
     userEmail: user.email,
     message,
     expiresAt,
-    leadError: leadError?.message
+    leadError: leadError ? 'Falha ao salvar lead.' : undefined
   }).catch(() => false);
 
   return NextResponse.json({
@@ -239,6 +257,6 @@ export async function POST(request: NextRequest) {
     emailSent,
     message: 'Acesso liberado por 15 dias.',
     leadSaved: !leadError,
-    leadError: leadError?.message
+    leadError: Boolean(leadError)
   });
 }

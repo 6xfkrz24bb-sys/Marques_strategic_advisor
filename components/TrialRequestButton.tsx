@@ -7,14 +7,18 @@ import { createClient } from '@/lib/supabase/client';
 export function TrialRequestButton() {
   const supabase = useMemo(() => createClient(), []);
   const [session, setSession] = useState<Session | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [shouldShowButton, setShouldShowButton] = useState(true);
   const [hasCheckedTrial, setHasCheckedTrial] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    supabase.auth.getSession().then(({ data }) => setSession(data.session)).finally(() => setIsAuthLoading(false));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setIsAuthLoading(false);
+    });
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
 
@@ -23,6 +27,8 @@ export function TrialRequestButton() {
 
     async function checkTrialAvailability() {
       setHasCheckedTrial(false);
+
+      if (isAuthLoading) return;
 
       if (!session?.access_token) {
         setShouldShowButton(true);
@@ -40,7 +46,8 @@ export function TrialRequestButton() {
       if (json?.ok) {
         setShouldShowButton(Boolean(json.trialAvailable));
       } else {
-        setShouldShowButton(true);
+        setShouldShowButton(false);
+        setMessage('Não foi possível verificar o trial agora. Tente novamente em instantes.');
       }
 
       setHasCheckedTrial(true);
@@ -51,7 +58,7 @@ export function TrialRequestButton() {
     return () => {
       cancelled = true;
     };
-  }, [session?.access_token]);
+  }, [isAuthLoading, session?.access_token]);
 
   async function requestTrial() {
     if (!session?.access_token) {
@@ -85,11 +92,11 @@ export function TrialRequestButton() {
     }
   }
 
-  if (session && !hasCheckedTrial) return null;
+  if (isAuthLoading || (session && !hasCheckedTrial)) return null;
   if (!shouldShowButton && !message) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 max-w-[calc(100vw-2rem)] md:bottom-6 md:left-6">
+    <div className="fixed bottom-20 left-4 z-30 max-w-[calc(100vw-2rem)] md:bottom-6 md:left-6">
       {message && (
         <div className="mb-2 max-w-xs border border-amber-500/30 bg-slate-950/95 p-3 text-[11px] leading-relaxed text-amber-100 shadow-xl">
           {message}

@@ -2,7 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextRequest, NextResponse } from 'next/server';
 import { advisors, getAdvisor } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 import { isAdminEmail, monthStartIso, resolveMessageLimit, type AccessRow } from '@/lib/usage';
 
 const responsePlaybook = `
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       .eq('status', 'active')
       .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`);
 
-    if (rowsError) return badRequest(rowsError.message, 500);
+    if (rowsError) return serverError();
     const rows = (rowsData || []) as AccessRow[];
 
     if (!rows.some((row) => row.advisor_id === advisor.id)) return badRequest('Advisor não contratado ou acesso expirado.', 403);
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       .eq('role', 'user')
       .gte('created_at', monthStartIso());
 
-    if (countError) return badRequest(countError.message, 500);
+    if (countError) return serverError();
     const used = count || 0;
     if (used >= policy.limit) return badRequest(`Limite atingido no ${policy.label}.`, 429);
     usageNote = `\n\n---\nUso restante: ${Math.max(policy.limit - used - 1, 0)}/${policy.limit} (${policy.label}).`;

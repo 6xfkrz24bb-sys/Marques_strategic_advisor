@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 import { isAdminEmail } from '@/lib/usage';
 
 function key(value?: string | null) {
@@ -22,11 +22,11 @@ export async function GET(request: NextRequest) {
     supabase.from('chat_messages').select('user_id,created_at').eq('role', 'user').order('created_at', { ascending: false })
   ]);
 
-  if (profilesResult.error) return badRequest(profilesResult.error.message, 500);
-  if (suppliersResult.error) return badRequest(suppliersResult.error.message, 500);
-  if (leadsResult.error) return badRequest(leadsResult.error.message, 500);
-  if (accessResult.error) return badRequest(accessResult.error.message, 500);
-  if (chatResult.error) return badRequest(chatResult.error.message, 500);
+  if (profilesResult.error) return serverError();
+  if (suppliersResult.error) return serverError();
+  if (leadsResult.error) return serverError();
+  if (accessResult.error) return serverError();
+  if (chatResult.error) return serverError();
 
   const byEmail = new Map<string, any>();
 
