@@ -71,14 +71,34 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return badRequest('GEMINI_API_KEY não configurada no backend.', 500);
 
+  const { data: recentMessages } = await supabase
+    .from('chat_messages')
+    .select('role,content,created_at')
+    .eq('user_id', user.id)
+    .eq('advisor_id', advisor.id)
+    .order('created_at', { ascending: false })
+    .limit(16);
+
+  const history = (recentMessages || [])
+    .reverse()
+    .map((message) => {
+      const label = message.role === 'user' ? 'Usuário' : 'Advisor';
+      return `${label}: ${String(message.content || '').slice(0, 3000)}`;
+    })
+    .join('\n\n');
+
+  const prompt = String(body.message).slice(0, 12000);
+  const contextualPrompt = history
+    ? `Histórico recente desta conversa com o usuário:\n\n${history}\n\nMensagem atual do usuário:\n${prompt}\n\nResponda considerando o histórico acima e mantendo continuidade.`
+    : prompt;
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: safeGeminiModel(),
     systemInstruction: `${advisor.systemPrompt}\n\n${responsePlaybook}`
   });
 
-  const prompt = String(body.message).slice(0, 12000);
-  const result = await model.generateContent(prompt);
+  const result = await model.generateContent(contextualPrompt);
   const text = `${result.response.text() || 'Não consegui gerar resposta nesta tentativa.'}${usageNote}`;
 
   await supabase.from('chat_messages').insert([
