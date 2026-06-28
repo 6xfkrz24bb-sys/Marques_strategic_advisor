@@ -11,6 +11,13 @@ function scrollConversationToBottom(messages: HTMLElement | null, behavior: Scro
   });
 }
 
+function setExpandButtonState(button: HTMLButtonElement, expanded: boolean) {
+  button.classList.toggle('is-expanded', expanded);
+  button.title = expanded ? 'Voltar ao painel' : 'Expandir conversa';
+  button.setAttribute('aria-label', expanded ? 'Voltar ao painel' : 'Expandir conversa');
+  button.innerHTML = `<span aria-hidden="true">${expanded ? '⤡' : '⤢'}</span>`;
+}
+
 export function ChatViewportEnhancer() {
   useEffect(() => {
     let messagesObserver: MutationObserver | null = null;
@@ -33,11 +40,11 @@ export function ChatViewportEnhancer() {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'msa-chat-expand-button';
-        button.textContent = 'Expandir conversa';
+        setExpandButtonState(button, shell.classList.contains('msa-chat-expanded'));
         button.addEventListener('click', () => {
           const expanded = shell.classList.toggle('msa-chat-expanded');
           document.body.classList.toggle('msa-chat-lock', expanded);
-          button.textContent = expanded ? 'Voltar ao painel' : 'Expandir conversa';
+          setExpandButtonState(button, expanded);
           scrollConversationToBottom(messages, 'auto');
         });
         header.appendChild(button);
