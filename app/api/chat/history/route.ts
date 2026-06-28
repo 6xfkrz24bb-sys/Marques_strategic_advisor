@@ -15,18 +15,21 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('chat_messages')
-    .select('role,content,created_at')
+    .select('id,role,content,created_at')
     .eq('user_id', user.id)
     .eq('advisor_id', advisor.id)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(120);
 
   if (error) return badRequest(error.message, 500);
 
+  const chronologicalMessages = (data || []).reverse();
+
   return NextResponse.json({
     ok: true,
     advisorId: advisor.id,
-    messages: (data || []).map((message) => ({
+    messages: chronologicalMessages.map((message) => ({
       role: message.role,
       content: message.content,
       created_at: message.created_at
