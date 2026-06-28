@@ -2,7 +2,7 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { NextRequest, NextResponse } from 'next/server';
 import { advisors, calculateBoardPrice, type Advisor } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 
 function getSiteUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     .select('id')
     .single();
 
-  if (subError) return badRequest(subError.message, 500);
+  if (subError) return serverError();
 
   const client = new MercadoPagoConfig({ accessToken });
   const preference = new Preference(client);

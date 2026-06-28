@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdvisor } from '@/lib/advisors';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 function messageOrder(role: string) {
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(120);
 
-  if (error) return badRequest(error.message, 500);
+  if (error) return serverError();
 
   const chronologicalMessages = [...(data || [])].sort((a, b) => {
     const timeA = Date.parse(a.created_at || '');

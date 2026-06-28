@@ -123,6 +123,7 @@ export function AdvisorPlatform() {
   const supabase = useMemo(() => createClient(), []);
   const [view, setView] = useState<ViewName>('landing');
   const [session, setSession] = useState<Session | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [selectedAdvisorIds, setSelectedAdvisorIds] = useState<string[]>([]);
   const [activeAdvisorId, setActiveAdvisorId] = useState<string>('ceo');
   const [paidAdvisorIds, setPaidAdvisorIds] = useState<string[]>([]);
@@ -157,8 +158,11 @@ export function AdvisorPlatform() {
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    supabase.auth.getSession().then(({ data }) => setSession(data.session)).finally(() => setIsAuthLoading(false));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setIsAuthLoading(false);
+    });
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
 
@@ -346,7 +350,7 @@ export function AdvisorPlatform() {
         body: JSON.stringify({ advisorId: activeAdvisor.id, message })
       });
       const json = await response.json();
-      if (!json.ok) throw new Error(json.error || 'Falha no advisor.');
+      if (!json.ok) throw new Error(json.error || 'Não foi possível consultar o advisor agora.');
       setChatMessages((current) => ({
         ...current,
         [activeAdvisor.id]: [...(current[activeAdvisor.id] || []), { role: 'assistant', content: json.answer }]
@@ -610,14 +614,18 @@ export function AdvisorPlatform() {
 
       {view === 'panel' && (
         <section className="view-fade mx-auto max-w-7xl px-4 py-10 md:px-12">
-          {!session ? (
+          {isAuthLoading ? (
+            <div className="border border-white/5 bg-slate-900 p-8 text-center">
+              <p className="text-sm text-slate-400">Carregando sua sessão...</p>
+            </div>
+          ) : !session ? (
             <div className="border border-white/5 bg-slate-900 p-8 text-center">
               <p className="text-sm text-slate-400">Faça login para acessar seu painel.</p>
               <button onClick={() => navigate('login')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Entrar</button>
             </div>
           ) : paidAdvisorIds.length === 0 ? (
             <div className="border border-white/5 bg-slate-900 p-8 text-center">
-              <p className="text-sm text-slate-400">Nenhum advisor ativo. Selecione advisors e conclua o pagamento.</p>
+              <p className="text-sm text-slate-400">Nenhum advisor ativo encontrado. Se você acabou de liberar o trial ou concluir o pagamento, aguarde alguns segundos e atualize o painel.</p>
               <button onClick={() => navigate('advisors')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Contratar advisors</button>
             </div>
           ) : (
@@ -651,7 +659,7 @@ export function AdvisorPlatform() {
                 </div>
                 <form onSubmit={sendChatMessage} className="mt-4 flex gap-2 border-t border-white/5 pt-4">
                   <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Fazer consulta estratégica..." className="flex-1 border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
-                  <button disabled={isBusy} className="bg-amber-500 px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">Enviar</button>
+                  <button disabled={isBusy || !chatInput.trim()} className="bg-amber-500 px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">{isBusy ? 'Enviando...' : 'Enviar'}</button>
                 </form>
               </div>
             </div>

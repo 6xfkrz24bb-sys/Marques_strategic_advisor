@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { cleanString, isEmail, optionalString } from '@/lib/api-validation';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  if (!body?.legalName || !body?.taxId || !body?.email) {
+  const legalName = cleanString(body?.legalName, 180);
+  const taxId = cleanString(body?.taxId, 32);
+  const email = cleanString(body?.email, 180).toLowerCase();
+  if (!legalName || !taxId || !email) {
     return badRequest('Nome/razão social, CPF/CNPJ e e-mail são obrigatórios.');
   }
+  if (!isEmail(email)) return badRequest('Informe um e-mail válido.');
 
   const user = await getUserFromBearer(request).catch(() => null);
   const supabase = createAdminClient();
@@ -14,23 +19,23 @@ export async function POST(request: NextRequest) {
     .from('suppliers')
     .insert({
       user_id: user?.id ?? null,
-      legal_name: body.legalName,
-      trade_name: body.tradeName ?? null,
-      tax_id: body.taxId,
-      category: body.category ?? null,
-      contact_name: body.contactName ?? null,
-      email: body.email,
-      whatsapp: body.whatsapp ?? null,
-      city: body.city ?? null,
-      state: body.state ?? null,
-      notes: body.notes ?? null,
-      score: body.score ?? null,
+      legal_name: legalName,
+      trade_name: optionalString(body?.tradeName, 160),
+      tax_id: taxId,
+      category: optionalString(body?.category, 120),
+      contact_name: optionalString(body?.contactName, 160),
+      email,
+      whatsapp: optionalString(body?.whatsapp, 60),
+      city: optionalString(body?.city, 120),
+      state: optionalString(body?.state, 2)?.toUpperCase() ?? null,
+      notes: optionalString(body?.notes, 4000),
+      score: Number.isFinite(body?.score) ? Number(body.score) : null,
       status: 'new'
     })
     .select('id')
     .single();
 
-  if (error) return badRequest(error.message, 500);
+  if (error) return serverError();
   return NextResponse.json({ ok: true, id: data.id });
 }
 
@@ -46,6 +51,6 @@ export async function GET(request: NextRequest) {
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) return badRequest(error.message, 500);
+  if (error) return serverError();
   return NextResponse.json({ ok: true, suppliers: data });
 }
