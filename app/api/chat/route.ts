@@ -76,10 +76,11 @@ export async function POST(request: NextRequest) {
 
   const { data: recentMessages } = await supabase
     .from('chat_messages')
-    .select('role,content,created_at')
+    .select('id,role,content,created_at')
     .eq('user_id', user.id)
     .eq('advisor_id', advisor.id)
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(16);
 
   const history = (recentMessages || [])
