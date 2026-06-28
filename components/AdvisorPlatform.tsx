@@ -27,7 +27,7 @@ import { createClient } from '@/lib/supabase/client';
 
 type ViewName = 'landing' | 'advisors' | 'diagnostic' | 'login' | 'panel' | 'suppliers' | 'contact';
 type AuthMode = 'login' | 'register';
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type ChatMessage = { role: 'user' | 'assistant'; content: string; created_at?: string };
 
 type SupplierForm = {
   legalName: string;
@@ -172,6 +172,10 @@ export function AdvisorPlatform() {
   }, [session]);
 
   useEffect(() => {
+    if (view === 'panel' && session?.access_token && activeAdvisorId) void loadChatHistory(activeAdvisorId);
+  }, [view, session?.access_token, activeAdvisorId]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get('payment');
     if (payment === 'success') {
@@ -202,6 +206,22 @@ export function AdvisorPlatform() {
       setPaidAdvisorIds(json.advisorIds || []);
       if (json.advisorIds?.[0]) setActiveAdvisorId(json.advisorIds[0]);
     }
+  }
+
+  async function loadChatHistory(advisorId: string) {
+    if (!session?.access_token) return;
+
+    const response = await fetch(`/api/chat/history?advisorId=${encodeURIComponent(advisorId)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    }).catch(() => null);
+
+    const json = await response?.json().catch(() => null);
+    if (!json?.ok) return;
+
+    setChatMessages((current) => ({
+      ...current,
+      [advisorId]: json.messages || []
+    }));
   }
 
   function navigate(nextView: ViewName) {
@@ -624,7 +644,7 @@ export function AdvisorPlatform() {
                     </div>
                   )}
                   {(chatMessages[activeAdvisor.id] || []).map((message, index) => (
-                    <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={`${message.role}-${message.created_at || index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[86%] whitespace-pre-line rounded-lg p-3.5 text-xs leading-relaxed ${message.role === 'user' ? 'bg-amber-500 text-slate-950' : 'border border-white/5 bg-slate-950 text-slate-300'}`}>{message.content}</div>
                     </div>
                   ))}
