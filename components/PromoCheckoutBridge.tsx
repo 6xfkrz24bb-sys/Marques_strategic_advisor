@@ -1,10 +1,22 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { advisors } from '@/lib/advisors';
-import { createClient } from '@/lib/supabase/client';
 
-const pendingKey = 'msa-promo-pending-ids';
+const planLinks = {
+  essential: 'https://mpago.la/1KXMPVj',
+  executive: 'https://mpago.la/1J6kvsP',
+  pro: 'https://mpago.la/1fAwqT7'
+};
+
+const linkMap: Record<string, keyof typeof planLinks> = {
+  '1YkeHXN': 'essential',
+  '1KXMPVj': 'essential',
+  '2GkAEwm': 'executive',
+  '1J6kvsP': 'executive',
+  '1rhJ6B5': 'pro',
+  '1fAwqT7': 'pro'
+};
 
 function selectedIds() {
   return Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
@@ -12,73 +24,59 @@ function selectedIds() {
     .filter((id): id is string => Boolean(id));
 }
 
-function nav(label: string) {
-  Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
-    .find((button) => button.textContent?.trim().toLowerCase() === label)
-    ?.click();
+function planFromCount(count: number): keyof typeof planLinks | null {
+  if (count <= 0) return null;
+  if (count === 1) return 'essential';
+  if (count <= 4) return 'executive';
+  return 'pro';
+}
+
+function redirectToPlan(plan: keyof typeof planLinks | null) {
+  if (!plan) return;
+  window.location.assign(planLinks[plan]);
 }
 
 export function PromoCheckoutBridge() {
-  const supabase = useMemo(() => createClient(), []);
-
   useEffect(() => {
-    let busy = false;
-
-    async function checkout(ids: string[]) {
-      const advisorIds = Array.from(new Set(ids));
-      if (!advisorIds.length) return nav('advisors');
-
-      const { data } = await supabase.auth.getSession();
-      if (!data.session?.access_token) {
-        window.sessionStorage.setItem(pendingKey, JSON.stringify(advisorIds));
-        nav('login');
-        return;
-      }
-
-      if (busy) return;
-      busy = true;
-      const response = await fetch('/api/checkout/mercadopago', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${data.session.access_token}`
-        },
-        body: JSON.stringify({ advisorIds })
+    const applyLinks = () => {
+      document.querySelectorAll<HTMLAnchorElement>('a[href*="mpago.la"]').forEach((anchor) => {
+        const found = Object.entries(linkMap).find(([token]) => anchor.href.includes(token));
+        if (found) anchor.href = planLinks[found[1]];
       });
-      const json = await response.json().catch(() => null);
-      busy = false;
-      if (json?.checkoutUrl) window.location.assign(json.checkoutUrl);
-    }
+    };
 
     function onClick(event: MouseEvent) {
       const target = event.target as HTMLElement | null;
+      const anchor = target?.closest<HTMLAnchorElement>('a[href*="mpago.la"]');
       const button = target?.closest<HTMLButtonElement>('button');
 
-      if (button?.textContent?.trim().toLowerCase() === 'assinar plano') {
+      if (anchor) {
+        const found = Object.entries(linkMap).find(([token]) => anchor.href.includes(token));
+        if (!found) return;
         event.preventDefault();
         event.stopPropagation();
-        void checkout(selectedIds());
+        redirectToPlan(found[1]);
+      }
+
+      if (button?.textContent?.trim().toLowerCase() === 'assinar plano') {
+        const plan = planFromCount(selectedIds().length);
+        if (!plan) return;
+        event.preventDefault();
+        event.stopPropagation();
+        redirectToPlan(plan);
       }
     }
 
-    async function resume() {
-      const pending = window.sessionStorage.getItem(pendingKey);
-      if (!pending) return;
-      const { data } = await supabase.auth.getSession();
-      if (!data.session?.access_token) return;
-      window.sessionStorage.removeItem(pendingKey);
-      void checkout(JSON.parse(pending) as string[]);
-    }
-
+    applyLinks();
+    const observer = new MutationObserver(applyLinks);
+    observer.observe(document.body, { childList: true, subtree: true });
     document.addEventListener('click', onClick, true);
-    const { data: listener } = supabase.auth.onAuthStateChange(() => void resume());
-    void resume();
 
     return () => {
+      observer.disconnect();
       document.removeEventListener('click', onClick, true);
-      listener.subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, []);
 
   return null;
 }
