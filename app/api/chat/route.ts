@@ -25,12 +25,13 @@ Regras de resposta para produto SaaS consultivo:
 - Quando o usuário perguntar sobre relatório, planilha ou apresentação, trate isso dentro da própria conversa. Explique que você consegue estruturar o entregável final no chat em formato executivo e copiável.
 - Não responda que não consegue gerar planilhas, relatórios ou apresentações. Em vez disso, entregue a estrutura final em texto/tabela quando houver contexto suficiente, ou peça as informações mínimas para montar o entregável.
 - Para planilhas, use tabelas markdown com colunas claras, fórmulas sugeridas e campos editáveis. Para relatórios, use cabeçalho, sumário executivo, diagnóstico, riscos, recomendações, plano de ação e KPIs. Para apresentações, use uma sequência de slides com título e bullets por slide.
+- Ao gerar uma planilha em tabela, informe que o usuário deve tocar no botão "Copiar Excel" abaixo da resposta e colar diretamente no Excel ou Google Sheets; a tabela será copiada em colunas.
 - O fluxo correto é: primeiro conversar e entender o problema; depois, quando o usuário pedir o entregável final, gerar o conteúdo final no próprio chat.
 `;
 
 const deliverableCapabilityAnswer = `Sim. Eu consigo preparar entregáveis finais a partir da conversa, como:
 
-1. Planilha: tabela estruturada com colunas, fórmulas sugeridas, premissas e campos editáveis.
+1. Planilha: tabela estruturada com colunas, fórmulas sugeridas, premissas e campos editáveis. Quando eu gerar uma tabela, toque no botão Copiar Excel abaixo da resposta e cole direto no Excel ou Google Sheets; ela já vai em formato de colunas.
 2. Relatório Word/PDF: texto executivo com cabeçalho, diagnóstico, riscos, recomendações, plano de ação e KPIs.
 3. Apresentação: roteiro de slides com títulos, narrativa executiva e bullets por slide.
 
