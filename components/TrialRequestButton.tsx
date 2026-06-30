@@ -4,6 +4,26 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 
+const GOOGLE_ADS_TRIAL_CONVERSION_ID = 'AW-18130712066/Th23ClfxqsgcEILsssVD';
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
+function reportGoogleAdsTrialConversion(userId?: string) {
+  if (typeof window.gtag !== 'function') return;
+
+  const conversionKey = `google-ads-trial-conversion:${GOOGLE_ADS_TRIAL_CONVERSION_ID}:${userId || 'anonymous'}`;
+  if (window.sessionStorage.getItem(conversionKey)) return;
+
+  window.gtag('event', 'conversion', {
+    send_to: GOOGLE_ADS_TRIAL_CONVERSION_ID
+  });
+  window.sessionStorage.setItem(conversionKey, 'true');
+}
+
 export function TrialRequestButton() {
   const supabase = useMemo(() => createClient(), []);
   const [session, setSession] = useState<Session | null>(null);
@@ -83,6 +103,7 @@ export function TrialRequestButton() {
         if (json?.trialAvailable === false || json?.hasRequestedTrial) setShouldShowButton(false);
         throw new Error(json?.error || 'Não foi possível registrar a solicitação.');
       }
+      if (json.trialGranted) reportGoogleAdsTrialConversion(session.user.id);
       setShouldShowButton(false);
       setMessage(json.message || 'Acesso liberado por 15 dias.');
     } catch (error) {
