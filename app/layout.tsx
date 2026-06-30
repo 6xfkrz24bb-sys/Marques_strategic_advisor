@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { ChatCopyEnhancements } from '@/components/ChatCopyEnhancements';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
 import { GoogleAdsPurchaseConversion } from '@/components/GoogleAdsPurchaseConversion';
 import { GoogleTag } from '@/components/GoogleTag';
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PromoCheckoutBridge />
         {children}
         <ChatInputEnhancements />
+        <ChatCopyEnhancements />
         <LoggedUserDiagnosticAutofill />
         <PWAInstallPrompt />
         <TrialRequestButton />
