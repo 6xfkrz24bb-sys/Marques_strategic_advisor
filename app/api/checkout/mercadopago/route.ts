@@ -1,11 +1,26 @@
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { NextRequest, NextResponse } from 'next/server';
-import { advisors, calculateBoardPrice, type Advisor } from '@/lib/advisors';
+import { advisors, type Advisor } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 
 function getSiteUrl() {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function calculatePromotionalBoardPrice(ids: string[]) {
+  const count = Array.from(new Set(ids)).length;
+  if (count === 0) return 0;
+  if (count === 1) return 40;
+  if (count <= 4) return 81;
+  return 150;
+}
+
+function getPromotionalPlanName(ids: string[]) {
+  const count = Array.from(new Set(ids)).length;
+  if (count === 1) return 'Plano Essencial Promocional';
+  if (count <= 4) return 'Plano Executivo Promocional';
+  return 'Board Pro Promocional';
 }
 
 export async function POST(request: NextRequest) {
@@ -24,7 +39,7 @@ export async function POST(request: NextRequest) {
   if (!accessToken) return badRequest('MERCADOPAGO_ACCESS_TOKEN não configurado.', 500);
 
   const siteUrl = getSiteUrl();
-  const amount = calculateBoardPrice(advisorIds);
+  const amount = calculatePromotionalBoardPrice(advisorIds);
   const externalReference = `${user.id}|${advisorIds.join(',')}|${Date.now()}`;
   const supabase = createAdminClient();
 
@@ -37,7 +52,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       amount_cents: Math.round(amount * 100),
       currency: 'BRL',
-      metadata: { advisorIds, pricingRule: advisorIds.length >= 6 ? 'board_discount' : 'per_advisor' }
+      metadata: { advisorIds, pricingRule: 'launch_promo_2026', planName: getPromotionalPlanName(advisorIds) }
     })
     .select('id')
     .single();
@@ -53,16 +68,17 @@ export async function POST(request: NextRequest) {
       metadata: {
         user_id: user.id,
         advisor_ids: advisorIds.join(','),
-        subscription_id: sub.id
+        subscription_id: sub.id,
+        pricing_rule: 'launch_promo_2026'
       },
       items: [
         {
           id: advisorIds.join(','),
-          title: advisorIds.length >= 6 ? 'Board Completo Marques Strategic Advisor' : `Marques Advisor: ${selected.map((item) => item.title).join(', ')}`,
+          title: `${getPromotionalPlanName(advisorIds)} - Marques Advisors`,
           quantity: 1,
           unit_price: amount,
           currency_id: 'BRL',
-          description: 'Acesso mensal aos advisors executivos selecionados.'
+          description: 'Acesso mensal promocional aos advisors executivos selecionados.'
         }
       ],
       payer: {
