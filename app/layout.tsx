@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { AdvisorDeliverables } from '@/components/AdvisorDeliverables';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
 import { GoogleAdsPurchaseConversion } from '@/components/GoogleAdsPurchaseConversion';
 import { GoogleTag } from '@/components/GoogleTag';
@@ -44,7 +43,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <PromoPricing />
         <PromoCheckoutBridge />
         {children}
-        <AdvisorDeliverables />
         <ChatInputEnhancements />
         <LoggedUserDiagnosticAutofill />
         <PWAInstallPrompt />
