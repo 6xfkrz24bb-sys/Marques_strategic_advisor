@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { advisors, calculateBoardPrice, getAdvisor } from '@/lib/advisors';
 import { createClient } from '@/lib/supabase/client';
+import { getAuthCallbackUrl } from '@/lib/supabase/config';
 
 type ViewName = 'landing' | 'advisors' | 'diagnostic' | 'login' | 'panel' | 'suppliers' | 'contact';
 type AuthMode = 'login' | 'register';
@@ -281,22 +282,43 @@ export function AdvisorPlatform() {
 
   async function submitAuth(event: React.FormEvent) {
     event.preventDefault();
+    const email = authEmail.trim();
+    const password = authPassword.trim();
+    const fullName = authName.trim();
+
+    if (!email || !password || (authMode === 'register' && !fullName)) {
+      setAlertMessage('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
     setIsBusy(true);
     try {
-      const result = authMode === 'login'
-        ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
-        : await supabase.auth.signUp({
-            email: authEmail,
-            password: authPassword,
-            options: { data: { full_name: authName } }
-          });
+      if (authMode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        setAlertMessage('Login realizado.');
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: getAuthCallbackUrl()
+          }
+        });
 
-      if (result.error) throw result.error;
-      setAlertMessage(authMode === 'login' ? 'Login realizado.' : 'Conta criada. Verifique seu e-mail se a confirmação estiver ativa no Supabase.');
+        if (error) throw error;
+        if (data.user && data.user.identities?.length === 0) {
+          throw new Error('Este e-mail já está cadastrado. Faça login ou recupere o acesso pelo Supabase.');
+        }
+        setAlertMessage(data.session ? 'Conta criada e login realizado.' : 'Conta criada. Verifique seu e-mail para confirmar o cadastro.');
+      }
+
       if (selectedAdvisorIds.length) await startCheckout();
       else navigate('panel');
     } catch (error) {
-      setAlertMessage(error instanceof Error ? error.message : 'Falha na autenticação.');
+      const message = error instanceof Error ? error.message : 'Falha na autenticação.';
+      setAlertMessage(message || 'Falha na autenticação. Confira os dados e tente novamente.');
     } finally {
       setIsBusy(false);
     }

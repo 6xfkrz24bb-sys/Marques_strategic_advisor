@@ -100,6 +100,16 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
+
+### 4.1. Configurar autenticação Supabase
+
+No painel do Supabase, em Authentication > URL Configuration, configure:
+
+- **Site URL**: o mesmo valor de `NEXT_PUBLIC_SITE_URL`.
+- **Redirect URLs**: inclua `https://seu-dominio.vercel.app/api/auth/callback` e os domínios customizados usados em produção.
+
+O cadastro usa `NEXT_PUBLIC_SITE_URL` para montar o callback `/api/auth/callback`. Não coloque chaves reais ou `service_role` em variáveis públicas (`NEXT_PUBLIC_*`).
+
 ### 5. Rodar localmente
 
 ```bash

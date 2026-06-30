@@ -1,4 +1,8 @@
 @tailwind base;
+
+:root {
+  --font-jakarta: Inter, system-ui, sans-serif;
+}
 @tailwind components;
 @tailwind utilities;
 
