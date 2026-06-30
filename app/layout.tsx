@@ -4,6 +4,8 @@ import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
 import { GoogleAdsPurchaseConversion } from '@/components/GoogleAdsPurchaseConversion';
 import { GoogleTag } from '@/components/GoogleTag';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
+import { PromoCheckoutBridge } from '@/components/PromoCheckoutBridge';
+import { PromoPricing } from '@/components/PromoPricing';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { TrialRequestButton } from '@/components/TrialRequestButton';
 import './globals.css';
@@ -38,6 +40,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans antialiased">
         <GoogleTag />
         <GoogleAdsPurchaseConversion />
+        <PromoPricing />
+        <PromoCheckoutBridge />
         {children}
         <ChatInputEnhancements />
         <LoggedUserDiagnosticAutofill />
