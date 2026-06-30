@@ -640,7 +640,7 @@ export function AdvisorPlatform() {
                   })}
                 </div>
               </aside>
-              <div className="flex min-h-[560px] flex-col border border-white/5 bg-slate-900 p-4 md:p-6">
+              <div data-advisor-panel="active" data-advisor-id={activeAdvisor.id} data-advisor-title={activeAdvisor.title} className="flex min-h-[560px] flex-col border border-white/5 bg-slate-900 p-4 md:p-6">
                 <div className="mb-4 border-b border-white/5 pb-4">
                   <h2 className="text-xl font-light uppercase tracking-wider text-white">{activeAdvisor.title}</h2>
                   <p className="mt-2 text-xs text-slate-500">{activeAdvisor.desc}</p>
