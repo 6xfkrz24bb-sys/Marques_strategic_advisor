@@ -28,9 +28,29 @@ Regras de resposta para produto SaaS consultivo:
 - O fluxo correto é: primeiro conversar e entender o problema; depois, quando o usuário pedir o entregável final, gerar o conteúdo final no próprio chat.
 `;
 
+const deliverableCapabilityAnswer = `Sim. Eu consigo preparar entregáveis finais a partir da conversa, como:
+
+1. Planilha: tabela estruturada com colunas, fórmulas sugeridas, premissas e campos editáveis.
+2. Relatório Word/PDF: texto executivo com cabeçalho, diagnóstico, riscos, recomendações, plano de ação e KPIs.
+3. Apresentação: roteiro de slides com títulos, narrativa executiva e bullets por slide.
+
+O fluxo correto é: primeiro conversamos para entender o problema; depois eu monto o entregável final no próprio chat, pronto para copiar, revisar e exportar. Para começar, me diga qual formato deseja e qual problema quer transformar em entregável.`;
+
 function safeGeminiModel() {
   const value = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim().replace(/^models\//, '');
   return /^[a-zA-Z0-9_.-]+$/.test(value) ? value : 'gemini-2.5-flash';
+}
+
+function isDeliverableCapabilityQuestion(message: string) {
+  const normalized = message
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  const asksCapability = /(consegue|pode|gera|gerar|responde|responder|faz|fazer|arquivo|arquivos)/.test(normalized);
+  const mentionsDeliverable = /(arquivo|arquivos|planilha|excel|xlsx|word|docx|pdf|relatorio|apresentacao|ppt|pptx|entregavel|entregaveis)/.test(normalized);
+
+  return asksCapability && mentionsDeliverable;
 }
 
 export async function POST(request: NextRequest) {
@@ -75,6 +95,17 @@ export async function POST(request: NextRequest) {
     usageNote = `\n\n---\nUso restante: ${Math.max(policy.limit - used - 1, 0)}/${policy.limit} (${policy.label}).`;
   }
 
+  const prompt = String(body.message).slice(0, 12000);
+
+  if (isDeliverableCapabilityQuestion(prompt)) {
+    const answer = `${deliverableCapabilityAnswer}${usageNote}`;
+    await supabase.from('chat_messages').insert([
+      { user_id: user.id, advisor_id: advisor.id, role: 'user', content: prompt },
+      { user_id: user.id, advisor_id: advisor.id, role: 'assistant', content: answer }
+    ]);
+    return NextResponse.json({ ok: true, answer, advisors: advisors.length });
+  }
+
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return badRequest('GEMINI_API_KEY não configurada no backend.', 500);
 
@@ -95,7 +126,6 @@ export async function POST(request: NextRequest) {
     })
     .join('\n\n');
 
-  const prompt = String(body.message).slice(0, 12000);
   const contextualPrompt = history
     ? `Histórico recente desta conversa com o usuário:\n\n${history}\n\nMensagem atual do usuário:\n${prompt}\n\nResponda considerando o histórico acima, mantendo continuidade e priorizando objetividade.`
     : prompt;
