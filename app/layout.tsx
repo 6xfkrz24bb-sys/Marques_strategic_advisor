@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
+import { GoogleAdsPurchaseConversion } from '@/components/GoogleAdsPurchaseConversion';
 import { GoogleTag } from '@/components/GoogleTag';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
 import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="pt-BR">
       <body className="font-sans antialiased">
         <GoogleTag />
+        <GoogleAdsPurchaseConversion />
         {children}
         <ChatInputEnhancements />
         <LoggedUserDiagnosticAutofill />
