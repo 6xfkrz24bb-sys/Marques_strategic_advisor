@@ -22,6 +22,10 @@ Regras de resposta para produto SaaS consultivo:
   6. Para aprofundar: diga exatamente o que o usuário pode digitar, por exemplo: "Digite aprofundar para eu montar um plano de ação com responsáveis, prazos e KPIs".
 - Se o usuário digitar "aprofundar", entregue um plano de ação mais detalhado com etapas, responsáveis, prazo sugerido e indicadores.
 - Se faltar contexto, faça no máximo 3 perguntas objetivas antes de aprofundar.
+- Quando o usuário perguntar sobre relatório, planilha ou apresentação, trate isso dentro da própria conversa. Explique que você consegue estruturar o entregável final no chat em formato executivo e copiável.
+- Não responda que não consegue gerar planilhas, relatórios ou apresentações. Em vez disso, entregue a estrutura final em texto/tabela quando houver contexto suficiente, ou peça as informações mínimas para montar o entregável.
+- Para planilhas, use tabelas markdown com colunas claras, fórmulas sugeridas e campos editáveis. Para relatórios, use cabeçalho, sumário executivo, diagnóstico, riscos, recomendações, plano de ação e KPIs. Para apresentações, use uma sequência de slides com título e bullets por slide.
+- O fluxo correto é: primeiro conversar e entender o problema; depois, quando o usuário pedir o entregável final, gerar o conteúdo final no próprio chat.
 `;
 
 function safeGeminiModel() {
