@@ -13,7 +13,7 @@ function calculatePromotionalBoardPrice(ids: string[]) {
   if (count === 0) return 0;
   if (count === 1) return 40;
   if (count <= 4) return 81;
-  return 150;
+  return 120;
 }
 
 function getPromotionalPlanName(ids: string[]) {
