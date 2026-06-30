@@ -5,11 +5,6 @@ import { advisors } from '@/lib/advisors';
 import { createClient } from '@/lib/supabase/client';
 
 const pendingKey = 'msa-promo-pending-ids';
-const linkMap: Record<string, string[]> = {
-  '1YkeHXN': ['ceo'],
-  '2GkAEwm': ['ceo', 'coo', 'financeiro', 'comercial'],
-  '1rhJ6B5': advisors.map((advisor) => advisor.id)
-};
 
 function selectedIds() {
   return Array.from(document.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'))
@@ -57,15 +52,7 @@ export function PromoCheckoutBridge() {
 
     function onClick(event: MouseEvent) {
       const target = event.target as HTMLElement | null;
-      const anchor = target?.closest<HTMLAnchorElement>('a[href*="mpago.la"]');
       const button = target?.closest<HTMLButtonElement>('button');
-
-      if (anchor) {
-        event.preventDefault();
-        event.stopPropagation();
-        const found = Object.entries(linkMap).find(([token]) => anchor.href.includes(token));
-        void checkout(found?.[1] || selectedIds());
-      }
 
       if (button?.textContent?.trim().toLowerCase() === 'assinar plano') {
         event.preventDefault();
