@@ -131,6 +131,7 @@ export function AdvisorPlatform() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [leadName, setLeadName] = useState('');
   const [leadEmail, setLeadEmail] = useState('');
   const [leadWhatsapp, setLeadWhatsapp] = useState('');
@@ -159,9 +160,15 @@ export function AdvisorPlatform() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session)).finally(() => setIsAuthLoading(false));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
       setIsAuthLoading(false);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        setAuthMode('login');
+        setAuthPassword('');
+        setView('login');
+      }
     });
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
@@ -297,6 +304,46 @@ export function AdvisorPlatform() {
       else navigate('panel');
     } catch (error) {
       setAlertMessage(error instanceof Error ? error.message : 'Falha na autenticação.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function requestPasswordReset() {
+    const email = authEmail.trim();
+    if (!email) {
+      setAlertMessage('Informe seu e-mail para receber o link de redefinição de senha.');
+      return;
+    }
+
+    setIsBusy(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`
+      });
+      if (error) throw error;
+
+      setAlertMessage('Se houver uma conta com esse e-mail, enviaremos um link para redefinir sua senha. Verifique também a caixa de spam.');
+    } catch (error) {
+      setAlertMessage(error instanceof Error ? error.message : 'Não foi possível solicitar a redefinição de senha.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function updatePassword(event: React.FormEvent) {
+    event.preventDefault();
+    setIsBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: authPassword });
+      if (error) throw error;
+
+      setIsPasswordRecovery(false);
+      setAuthPassword('');
+      setAlertMessage('Senha atualizada. Seu acesso já está liberado.');
+      navigate('panel');
+    } catch (error) {
+      setAlertMessage(error instanceof Error ? error.message : 'Não foi possível atualizar sua senha.');
     } finally {
       setIsBusy(false);
     }
@@ -599,15 +646,30 @@ export function AdvisorPlatform() {
 
       {view === 'login' && (
         <section className="view-fade mx-auto max-w-md px-6 py-16">
-          <h2 className="mb-6 text-center text-xl font-light uppercase tracking-widest text-white">{authMode === 'login' ? 'Acesso à consultoria' : 'Criar conta'}</h2>
-          <form onSubmit={submitAuth} className="space-y-4 border border-white/5 bg-slate-900 p-6">
+          <h2 className="mb-6 text-center text-xl font-light uppercase tracking-widest text-white">{isPasswordRecovery ? 'Criar nova senha' : authMode === 'login' ? 'Acesso à consultoria' : 'Criar conta'}</h2>
+          <form onSubmit={isPasswordRecovery ? updatePassword : submitAuth} className="space-y-4 border border-white/5 bg-slate-900 p-6">
+            {isPasswordRecovery ? (
+              <>
+                <p className="text-xs leading-relaxed text-slate-400">Digite uma nova senha com pelo menos 6 caracteres.</p>
+                <input required minLength={6} type="password" autoComplete="new-password" placeholder="Nova senha" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+                <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">Salvar nova senha</button>
+              </>
+            ) : (
+              <>
             {authMode === 'register' && <input required placeholder="Nome completo" value={authName} onChange={(e) => setAuthName(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />}
             <input required type="email" placeholder="E-mail" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
             <input required type="password" placeholder="Senha" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+            {authMode === 'login' && (
+              <button type="button" disabled={isBusy} onClick={requestPasswordReset} className="w-full text-right text-xs text-slate-400 hover:text-amber-500 disabled:opacity-60">
+                Esqueci minha senha
+              </button>
+            )}
             <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">{authMode === 'login' ? 'Entrar' : 'Cadastrar'}</button>
             <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-center text-xs text-amber-500">
               {authMode === 'login' ? 'Não tem conta? Criar conta' : 'Já tem conta? Fazer login'}
             </button>
+              </>
+            )}
           </form>
         </section>
       )}
