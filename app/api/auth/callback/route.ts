@@ -5,7 +5,19 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const requestedPath = requestUrl.searchParams.get('next');
-  const nextPath = requestedPath?.startsWith('/') && !requestedPath.startsWith('//') ? requestedPath : '/';
+  const redirectUrl = new URL(
+    requestedPath?.startsWith('/') &&
+      !requestedPath.startsWith('//') &&
+      !requestedPath.includes('\\')
+      ? requestedPath
+      : '/',
+    requestUrl.origin,
+  );
+
+  // Keep this origin check as a final guard against URL parser edge cases.
+  if (redirectUrl.origin !== requestUrl.origin) {
+    redirectUrl.href = new URL('/', requestUrl.origin).href;
+  }
 
   if (code) {
     const supabase = await createClient();
@@ -17,5 +29,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(new URL(nextPath, requestUrl.origin));
+  return NextResponse.redirect(redirectUrl);
 }
