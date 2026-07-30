@@ -188,8 +188,13 @@ export function AdvisorPlatform() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const authError = params.get('authError');
     const payment = params.get('payment');
-    if (payment === 'success') {
+    if (authError) {
+      setAlertMessage(authError);
+      setView('login');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (payment === 'success') {
       setAlertMessage('Pagamento recebido. A liberação pode levar alguns segundos enquanto o Mercado Pago confirma o webhook.');
       setView('panel');
       void loadAdvisorAccess();
@@ -290,16 +295,33 @@ export function AdvisorPlatform() {
     event.preventDefault();
     setIsBusy(true);
     try {
+      const email = authEmail.trim().toLowerCase();
+      if (!email) throw new Error('Informe seu e-mail.');
+
       const result = authMode === 'login'
-        ? await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword })
+        ? await supabase.auth.signInWithPassword({ email, password: authPassword })
         : await supabase.auth.signUp({
-            email: authEmail,
+            email,
             password: authPassword,
-            options: { data: { full_name: authName } }
+            options: {
+              data: { full_name: authName.trim() },
+              emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/`
+            }
           });
 
       if (result.error) throw result.error;
-      setAlertMessage(authMode === 'login' ? 'Login realizado.' : 'Conta criada. Verifique seu e-mail se a confirmação estiver ativa no Supabase.');
+
+      if (!result.data.session) {
+        setAlertMessage('Conta criada. Confirme o cadastro pelo link enviado ao seu e-mail antes de fazer login.');
+        setAuthMode('login');
+        setAuthPassword('');
+        return;
+      }
+
+      // Make the authenticated session available immediately. Waiting only for
+      // onAuthStateChange caused a race on production connections.
+      setSession(result.data.session);
+      setAlertMessage('Login realizado.');
       if (selectedAdvisorIds.length) await startCheckout();
       else navigate('panel');
     } catch (error) {
