@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import {
   BadgeDollarSign,
@@ -149,6 +149,7 @@ export function AdvisorPlatform() {
   const [contactSubject, setContactSubject] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const authEventReceived = useRef(false);
 
   const selectedTotal = calculateBoardPrice(selectedAdvisorIds);
   const selectedPlanKey = getPlanByAdvisorCount(selectedAdvisorIds.length);
@@ -159,8 +160,8 @@ export function AdvisorPlatform() {
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session)).finally(() => setIsAuthLoading(false));
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      authEventReceived.current = true;
       setSession(nextSession);
       setIsAuthLoading(false);
       if (event === 'PASSWORD_RECOVERY') {
@@ -170,6 +171,17 @@ export function AdvisorPlatform() {
         setView('login');
       }
     });
+
+    // Register the listener before reading storage. This prevents a slower,
+    // stale getSession response from clearing a session created by a login.
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!authEventReceived.current) setSession(data.session);
+      })
+      .catch(() => setAlertMessage('Não foi possível verificar sua sessão. Tente entrar novamente.'))
+      .finally(() => setIsAuthLoading(false));
+
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
 
@@ -245,6 +257,14 @@ export function AdvisorPlatform() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function openAuth(mode: AuthMode) {
+    setAuthMode(mode);
+    setIsPasswordRecovery(false);
+    setAuthPassword('');
+    setAlertMessage('');
+    navigate('login');
+  }
+
   function toggleAdvisor(id: string) {
     setSelectedAdvisorIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   }
@@ -293,10 +313,15 @@ export function AdvisorPlatform() {
 
   async function submitAuth(event: React.FormEvent) {
     event.preventDefault();
+    if (isBusy) return;
+
+    setAlertMessage('');
     setIsBusy(true);
     try {
       const email = authEmail.trim().toLowerCase();
       if (!email) throw new Error('Informe seu e-mail.');
+      if (authPassword.length < 6) throw new Error('A senha deve ter pelo menos 6 caracteres.');
+      if (authMode === 'register' && !authName.trim()) throw new Error('Informe seu nome completo.');
 
       const result = authMode === 'login'
         ? await supabase.auth.signInWithPassword({ email, password: authPassword })
@@ -504,7 +529,10 @@ export function AdvisorPlatform() {
               <button onClick={signOut} className="flex items-center gap-1 hover:text-white"><LogOut className="h-3 w-3" /> Sair</button>
             </>
           ) : (
-            <button onClick={() => navigate('login')} className="text-amber-500 hover:text-amber-400">Login</button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => openAuth('login')} className="hover:text-amber-400">Entrar</button>
+              <button onClick={() => openAuth('register')} className="border border-amber-500 px-3 py-2 text-amber-500 hover:bg-amber-500 hover:text-slate-950">Criar conta</button>
+            </div>
           )}
         </div>
       </nav>
@@ -678,16 +706,16 @@ export function AdvisorPlatform() {
               </>
             ) : (
               <>
-            {authMode === 'register' && <input required placeholder="Nome completo" value={authName} onChange={(e) => setAuthName(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />}
-            <input required type="email" placeholder="E-mail" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
-            <input required type="password" placeholder="Senha" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+            {authMode === 'register' && <input required autoComplete="name" placeholder="Nome completo" value={authName} onChange={(e) => setAuthName(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />}
+            <input required type="email" autoComplete="email" inputMode="email" placeholder="E-mail" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+            <input required minLength={6} type="password" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} placeholder="Senha (mínimo de 6 caracteres)" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
             {authMode === 'login' && (
               <button type="button" disabled={isBusy} onClick={requestPasswordReset} className="w-full text-right text-xs text-slate-400 hover:text-amber-500 disabled:opacity-60">
                 Esqueci minha senha
               </button>
             )}
-            <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">{authMode === 'login' ? 'Entrar' : 'Cadastrar'}</button>
-            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-center text-xs text-amber-500">
+            <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">{isBusy ? 'Aguarde...' : authMode === 'login' ? 'Entrar' : 'Criar conta'}</button>
+            <button type="button" disabled={isBusy} onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthPassword(''); setAlertMessage(''); }} className="w-full text-center text-xs text-amber-500 disabled:opacity-60">
               {authMode === 'login' ? 'Não tem conta? Criar conta' : 'Já tem conta? Fazer login'}
             </button>
               </>
@@ -705,7 +733,7 @@ export function AdvisorPlatform() {
           ) : !session ? (
             <div className="border border-white/5 bg-slate-900 p-8 text-center">
               <p className="text-sm text-slate-400">Faça login para acessar seu painel.</p>
-              <button onClick={() => navigate('login')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Entrar</button>
+              <button onClick={() => openAuth('login')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Entrar</button>
             </div>
           ) : paidAdvisorIds.length === 0 ? (
             <div className="border border-white/5 bg-slate-900 p-8 text-center">
