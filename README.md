@@ -14,6 +14,7 @@ Migração do MVP em `index.html` para uma aplicação SaaS em Next.js + Supabas
 - Chat com IA via API backend `/api/chat`, sem expor chave do Gemini no navegador.
 - Checkout Mercado Pago em `/api/checkout/mercadopago`.
 - Webhook Mercado Pago em `/api/webhooks/mercadopago` para liberar acesso ao advisor.
+- Tag geral do Google Ads e evento de conversão de compra no retorno `payment=success`.
 - Schema SQL completo do Supabase em `supabase/schema.sql`.
 
 ## Arquitetura
@@ -99,15 +100,17 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
+Em ambientes que injetam variáveis de uma integração Supabase com prefixo, mantenha
+o mesmo prefixo na URL e na chave administrativa. A aplicação seleciona esse par
+quando a URL corresponde a `NEXT_PUBLIC_SUPABASE_URL`:
 
-### 4.1. Configurar autenticação Supabase
+```env
+MINHA_INTEGRACAO_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+MINHA_INTEGRACAO_SUPABASE_SECRET_KEY=sb_secret_xxx
+```
 
-No painel do Supabase, em Authentication > URL Configuration, configure:
-
-- **Site URL**: o mesmo valor de `NEXT_PUBLIC_SITE_URL`.
-- **Redirect URLs**: inclua `https://seu-dominio.vercel.app/api/auth/callback` e os domínios customizados usados em produção.
-
-O cadastro usa `NEXT_PUBLIC_SITE_URL` para montar o callback `/api/auth/callback`. Não coloque chaves reais ou `service_role` em variáveis públicas (`NEXT_PUBLIC_*`).
+Também é aceito `MINHA_INTEGRACAO_SUPABASE_SERVICE_ROLE_KEY` para projetos que
+ainda usam as chaves legadas.
 
 ### 5. Rodar localmente
 
@@ -128,7 +131,3 @@ Abra `http://localhost:3000`.
 ## Principais diferenças do MVP antigo
 
 - O MVP antigo simulava login e pagamento no front-end.
-- Agora as chaves ficam no backend/env vars.
-- O acesso ao advisor depende de `advisor_access` no banco.
-- Webhook de pagamento aprova e libera acesso.
-- Leads e fornecedores passam a ficar persistidos no Supabase.

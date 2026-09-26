@@ -1,17 +1,30 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
+import { ChatCopyEnhancements } from '@/components/ChatCopyEnhancements';
 import { ChatInputEnhancements } from '@/components/ChatInputEnhancements';
+import { ChatSubmitEnhancements } from '@/components/ChatSubmitEnhancements';
+import { GoogleAdsPurchaseConversion } from '@/components/GoogleAdsPurchaseConversion';
+import { GoogleTag } from '@/components/GoogleTag';
 import { LoggedUserDiagnosticAutofill } from '@/components/LoggedUserDiagnosticAutofill';
+import { PromoCheckoutBridge } from '@/components/PromoCheckoutBridge';
+import { PromoPricing } from '@/components/PromoPricing';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { TrialRequestButton } from '@/components/TrialRequestButton';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Marques Strategic Advisor',
-  description: 'Consultoria executiva sob demanda com advisors especializados por pilar de gestão.',
-  applicationName: 'Marques Advisor',
+  title: 'MSA | Marques Advisors',
+  description: 'Consultoria estratégica sob demanda com advisors executivos para decisões críticas de gestão.',
+  applicationName: 'MSA',
+  manifest: '/manifest.webmanifest',
+  icons: {
+    icon: '/icons/marques-icon.svg',
+    shortcut: '/icons/marques-icon.svg',
+    apple: '/icons/marques-icon.svg'
+  },
   appleWebApp: {
     capable: true,
-    title: 'Marques Advisor',
+    title: 'MSA',
     statusBarStyle: 'black-translucent'
   }
 };
@@ -27,9 +40,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR">
       <body className="font-sans antialiased">
+        <GoogleTag />
+        <GoogleAdsPurchaseConversion />
+        <PromoPricing />
+        <PromoCheckoutBridge />
         {children}
         <ChatInputEnhancements />
+        <ChatCopyEnhancements />
+        <ChatSubmitEnhancements />
         <LoggedUserDiagnosticAutofill />
+        <PWAInstallPrompt />
         <TrialRequestButton />
       </body>
     </html>

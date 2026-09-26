@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest } from '@/lib/http';
+import { cleanString, isEmail, optionalString, safeArray } from '@/lib/api-validation';
+import { badRequest, serverError } from '@/lib/http';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  if (!body?.name || !body?.email) return badRequest('Nome e e-mail são obrigatórios.');
+  const name = cleanString(body?.name, 160);
+  const email = cleanString(body?.email, 180).toLowerCase();
+  if (!name || !email) return badRequest('Nome e e-mail são obrigatórios.');
+  if (!isEmail(email)) return badRequest('Informe um e-mail válido.');
 
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from('leads')
     .insert({
-      name: body.name,
-      email: body.email,
-      whatsapp: body.whatsapp ?? null,
-      company: body.company ?? null,
-      agent_id: body.agentId ?? null,
-      score: Number.isFinite(body.score) ? body.score : null,
-      answers: body.answers ?? [],
-      source: body.source ?? 'diagnostic',
+      name,
+      email,
+      whatsapp: optionalString(body?.whatsapp, 60),
+      company: optionalString(body?.company, 160),
+      agent_id: optionalString(body?.agentId, 80),
+      score: Number.isFinite(body?.score) ? Math.max(0, Math.min(100, Number(body.score))) : null,
+      answers: safeArray(body?.answers, 100),
+      source: cleanString(body?.source, 60) || 'diagnostic',
       status: 'new'
     })
     .select('id')
     .single();
 
-  if (error) return badRequest(error.message, 500);
+  if (error) return serverError();
   return NextResponse.json({ ok: true, id: data.id });
 }

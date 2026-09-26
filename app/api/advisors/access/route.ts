@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { advisors } from '@/lib/advisors';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { badRequest, getUserFromBearer } from '@/lib/http';
+import { badRequest, getUserFromBearer, serverError } from '@/lib/http';
 
 function parseEmailList(value?: string) {
   return (value || '')
@@ -33,6 +33,6 @@ export async function GET(request: NextRequest) {
     .eq('status', 'active')
     .or(`expires_at.is.null,expires_at.gte.${new Date().toISOString()}`);
 
-  if (error) return badRequest(error.message, 500);
+  if (error) return serverError();
   return NextResponse.json({ ok: true, advisorIds: data.map((row: { advisor_id: string }) => row.advisor_id), accessType: 'subscription' });
 }

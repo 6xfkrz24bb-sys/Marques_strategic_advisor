@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import {
   BadgeDollarSign,
@@ -24,11 +24,10 @@ import {
 } from 'lucide-react';
 import { advisors, calculateBoardPrice, getAdvisor } from '@/lib/advisors';
 import { createClient } from '@/lib/supabase/client';
-import { getAuthCallbackUrl } from '@/lib/supabase/config';
 
 type ViewName = 'landing' | 'advisors' | 'diagnostic' | 'login' | 'panel' | 'suppliers' | 'contact';
 type AuthMode = 'login' | 'register';
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+type ChatMessage = { role: 'user' | 'assistant'; content: string; created_at?: string };
 
 type SupplierForm = {
   legalName: string;
@@ -124,6 +123,7 @@ export function AdvisorPlatform() {
   const supabase = useMemo(() => createClient(), []);
   const [view, setView] = useState<ViewName>('landing');
   const [session, setSession] = useState<Session | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [selectedAdvisorIds, setSelectedAdvisorIds] = useState<string[]>([]);
   const [activeAdvisorId, setActiveAdvisorId] = useState<string>('ceo');
   const [paidAdvisorIds, setPaidAdvisorIds] = useState<string[]>([]);
@@ -131,6 +131,7 @@ export function AdvisorPlatform() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authName, setAuthName] = useState('');
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [leadName, setLeadName] = useState('');
   const [leadEmail, setLeadEmail] = useState('');
   const [leadWhatsapp, setLeadWhatsapp] = useState('');
@@ -148,6 +149,7 @@ export function AdvisorPlatform() {
   const [contactSubject, setContactSubject] = useState('');
   const [contactMessage, setContactMessage] = useState('');
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const authEventReceived = useRef(false);
 
   const selectedTotal = calculateBoardPrice(selectedAdvisorIds);
   const selectedPlanKey = getPlanByAdvisorCount(selectedAdvisorIds.length);
@@ -158,8 +160,28 @@ export function AdvisorPlatform() {
   const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      authEventReceived.current = true;
+      setSession(nextSession);
+      setIsAuthLoading(false);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        setAuthMode('login');
+        setAuthPassword('');
+        setView('login');
+      }
+    });
+
+    // Register the listener before reading storage. This prevents a slower,
+    // stale getSession response from clearing a session created by a login.
+    supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        if (!authEventReceived.current) setSession(data.session);
+      })
+      .catch(() => setAlertMessage('Não foi possível verificar sua sessão. Tente entrar novamente.'))
+      .finally(() => setIsAuthLoading(false));
+
     return () => listener.subscription.unsubscribe();
   }, [supabase]);
 
@@ -173,9 +195,18 @@ export function AdvisorPlatform() {
   }, [session]);
 
   useEffect(() => {
+    if (view === 'panel' && session?.access_token && activeAdvisorId) void loadChatHistory(activeAdvisorId);
+  }, [view, session?.access_token, activeAdvisorId]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const authError = params.get('authError');
     const payment = params.get('payment');
-    if (payment === 'success') {
+    if (authError) {
+      setAlertMessage(authError);
+      setView('login');
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (payment === 'success') {
       setAlertMessage('Pagamento recebido. A liberação pode levar alguns segundos enquanto o Mercado Pago confirma o webhook.');
       setView('panel');
       void loadAdvisorAccess();
@@ -205,9 +236,33 @@ export function AdvisorPlatform() {
     }
   }
 
+  async function loadChatHistory(advisorId: string) {
+    if (!session?.access_token) return;
+
+    const response = await fetch(`/api/chat/history?advisorId=${encodeURIComponent(advisorId)}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    }).catch(() => null);
+
+    const json = await response?.json().catch(() => null);
+    if (!json?.ok) return;
+
+    setChatMessages((current) => ({
+      ...current,
+      [advisorId]: json.messages || []
+    }));
+  }
+
   function navigate(nextView: ViewName) {
     setView(nextView);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openAuth(mode: AuthMode) {
+    setAuthMode(mode);
+    setIsPasswordRecovery(false);
+    setAuthPassword('');
+    setAlertMessage('');
+    navigate('login');
   }
 
   function toggleAdvisor(id: string) {
@@ -258,43 +313,84 @@ export function AdvisorPlatform() {
 
   async function submitAuth(event: React.FormEvent) {
     event.preventDefault();
-    const email = authEmail.trim();
-    const password = authPassword.trim();
-    const fullName = authName.trim();
+    if (isBusy) return;
 
-    if (!email || !password || (authMode === 'register' && !fullName)) {
-      setAlertMessage('Preencha todos os campos obrigatórios.');
+    setAlertMessage('');
+    setIsBusy(true);
+    try {
+      const email = authEmail.trim().toLowerCase();
+      if (!email) throw new Error('Informe seu e-mail.');
+      if (authPassword.length < 6) throw new Error('A senha deve ter pelo menos 6 caracteres.');
+      if (authMode === 'register' && !authName.trim()) throw new Error('Informe seu nome completo.');
+
+      const result = authMode === 'login'
+        ? await supabase.auth.signInWithPassword({ email, password: authPassword })
+        : await supabase.auth.signUp({
+            email,
+            password: authPassword,
+            options: {
+              data: { full_name: authName.trim() },
+              emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/`
+            }
+          });
+
+      if (result.error) throw result.error;
+
+      if (!result.data.session) {
+        setAlertMessage('Conta criada. Confirme o cadastro pelo link enviado ao seu e-mail antes de fazer login.');
+        setAuthMode('login');
+        setAuthPassword('');
+        return;
+      }
+
+      // Make the authenticated session available immediately. Waiting only for
+      // onAuthStateChange caused a race on production connections.
+      setSession(result.data.session);
+      setAlertMessage('Login realizado.');
+      if (selectedAdvisorIds.length) await startCheckout();
+      else navigate('panel');
+    } catch (error) {
+      setAlertMessage(error instanceof Error ? error.message : 'Falha na autenticação.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function requestPasswordReset() {
+    const email = authEmail.trim();
+    if (!email) {
+      setAlertMessage('Informe seu e-mail para receber o link de redefinição de senha.');
       return;
     }
 
     setIsBusy(true);
     try {
-      if (authMode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        setAlertMessage('Login realizado.');
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: fullName },
-            emailRedirectTo: getAuthCallbackUrl()
-          }
-        });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/`
+      });
+      if (error) throw error;
 
-        if (error) throw error;
-        if (data.user && data.user.identities?.length === 0) {
-          throw new Error('Este e-mail já está cadastrado. Faça login ou recupere o acesso pelo Supabase.');
-        }
-        setAlertMessage(data.session ? 'Conta criada e login realizado.' : 'Conta criada. Verifique seu e-mail para confirmar o cadastro.');
-      }
-
-      if (selectedAdvisorIds.length) await startCheckout();
-      else navigate('panel');
+      setAlertMessage('Se houver uma conta com esse e-mail, enviaremos um link para redefinir sua senha. Verifique também a caixa de spam.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Falha na autenticação.';
-      setAlertMessage(message || 'Falha na autenticação. Confira os dados e tente novamente.');
+      setAlertMessage(error instanceof Error ? error.message : 'Não foi possível solicitar a redefinição de senha.');
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  async function updatePassword(event: React.FormEvent) {
+    event.preventDefault();
+    setIsBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: authPassword });
+      if (error) throw error;
+
+      setIsPasswordRecovery(false);
+      setAuthPassword('');
+      setAlertMessage('Senha atualizada. Seu acesso já está liberado.');
+      navigate('panel');
+    } catch (error) {
+      setAlertMessage(error instanceof Error ? error.message : 'Não foi possível atualizar sua senha.');
     } finally {
       setIsBusy(false);
     }
@@ -348,7 +444,7 @@ export function AdvisorPlatform() {
         body: JSON.stringify({ advisorId: activeAdvisor.id, message })
       });
       const json = await response.json();
-      if (!json.ok) throw new Error(json.error || 'Falha no advisor.');
+      if (!json.ok) throw new Error(json.error || 'Não foi possível consultar o advisor agora.');
       setChatMessages((current) => ({
         ...current,
         [activeAdvisor.id]: [...(current[activeAdvisor.id] || []), { role: 'assistant', content: json.answer }]
@@ -433,7 +529,10 @@ export function AdvisorPlatform() {
               <button onClick={signOut} className="flex items-center gap-1 hover:text-white"><LogOut className="h-3 w-3" /> Sair</button>
             </>
           ) : (
-            <button onClick={() => navigate('login')} className="text-amber-500 hover:text-amber-400">Login</button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => openAuth('login')} className="hover:text-amber-400">Entrar</button>
+              <button onClick={() => openAuth('register')} className="border border-amber-500 px-3 py-2 text-amber-500 hover:bg-amber-500 hover:text-slate-950">Criar conta</button>
+            </div>
           )}
         </div>
       </nav>
@@ -597,29 +696,48 @@ export function AdvisorPlatform() {
 
       {view === 'login' && (
         <section className="view-fade mx-auto max-w-md px-6 py-16">
-          <h2 className="mb-6 text-center text-xl font-light uppercase tracking-widest text-white">{authMode === 'login' ? 'Acesso à consultoria' : 'Criar conta'}</h2>
-          <form onSubmit={submitAuth} className="space-y-4 border border-white/5 bg-slate-900 p-6">
-            {authMode === 'register' && <input required placeholder="Nome completo" value={authName} onChange={(e) => setAuthName(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />}
-            <input required type="email" placeholder="E-mail" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
-            <input required type="password" placeholder="Senha" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
-            <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">{authMode === 'login' ? 'Entrar' : 'Cadastrar'}</button>
-            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="w-full text-center text-xs text-amber-500">
+          <h2 className="mb-6 text-center text-xl font-light uppercase tracking-widest text-white">{isPasswordRecovery ? 'Criar nova senha' : authMode === 'login' ? 'Acesso à consultoria' : 'Criar conta'}</h2>
+          <form onSubmit={isPasswordRecovery ? updatePassword : submitAuth} className="space-y-4 border border-white/5 bg-slate-900 p-6">
+            {isPasswordRecovery ? (
+              <>
+                <p className="text-xs leading-relaxed text-slate-400">Digite uma nova senha com pelo menos 6 caracteres.</p>
+                <input required minLength={6} type="password" autoComplete="new-password" placeholder="Nova senha" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+                <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">Salvar nova senha</button>
+              </>
+            ) : (
+              <>
+            {authMode === 'register' && <input required autoComplete="name" placeholder="Nome completo" value={authName} onChange={(e) => setAuthName(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />}
+            <input required type="email" autoComplete="email" inputMode="email" placeholder="E-mail" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+            <input required minLength={6} type="password" autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} placeholder="Senha (mínimo de 6 caracteres)" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none" />
+            {authMode === 'login' && (
+              <button type="button" disabled={isBusy} onClick={requestPasswordReset} className="w-full text-right text-xs text-slate-400 hover:text-amber-500 disabled:opacity-60">
+                Esqueci minha senha
+              </button>
+            )}
+            <button disabled={isBusy} className="w-full bg-amber-500 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">{isBusy ? 'Aguarde...' : authMode === 'login' ? 'Entrar' : 'Criar conta'}</button>
+            <button type="button" disabled={isBusy} onClick={() => { setAuthMode(authMode === 'login' ? 'register' : 'login'); setAuthPassword(''); setAlertMessage(''); }} className="w-full text-center text-xs text-amber-500 disabled:opacity-60">
               {authMode === 'login' ? 'Não tem conta? Criar conta' : 'Já tem conta? Fazer login'}
             </button>
+              </>
+            )}
           </form>
         </section>
       )}
 
       {view === 'panel' && (
         <section className="view-fade mx-auto max-w-7xl px-4 py-10 md:px-12">
-          {!session ? (
+          {isAuthLoading ? (
+            <div className="border border-white/5 bg-slate-900 p-8 text-center">
+              <p className="text-sm text-slate-400">Carregando sua sessão...</p>
+            </div>
+          ) : !session ? (
             <div className="border border-white/5 bg-slate-900 p-8 text-center">
               <p className="text-sm text-slate-400">Faça login para acessar seu painel.</p>
-              <button onClick={() => navigate('login')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Entrar</button>
+              <button onClick={() => openAuth('login')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Entrar</button>
             </div>
           ) : paidAdvisorIds.length === 0 ? (
             <div className="border border-white/5 bg-slate-900 p-8 text-center">
-              <p className="text-sm text-slate-400">Nenhum advisor ativo. Selecione advisors e conclua o pagamento.</p>
+              <p className="text-sm text-slate-400">Nenhum advisor ativo encontrado. Se você acabou de liberar o trial ou concluir o pagamento, aguarde alguns segundos e atualize o painel.</p>
               <button onClick={() => navigate('advisors')} className="mt-5 bg-amber-500 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950">Contratar advisors</button>
             </div>
           ) : (
@@ -634,7 +752,7 @@ export function AdvisorPlatform() {
                   })}
                 </div>
               </aside>
-              <div className="flex min-h-[560px] flex-col border border-white/5 bg-slate-900 p-4 md:p-6">
+              <div data-advisor-panel="active" data-advisor-id={activeAdvisor.id} data-advisor-title={activeAdvisor.title} className="flex min-h-[560px] flex-col border border-white/5 bg-slate-900 p-4 md:p-6">
                 <div className="mb-4 border-b border-white/5 pb-4">
                   <h2 className="text-xl font-light uppercase tracking-wider text-white">{activeAdvisor.title}</h2>
                   <p className="mt-2 text-xs text-slate-500">{activeAdvisor.desc}</p>
@@ -646,14 +764,14 @@ export function AdvisorPlatform() {
                     </div>
                   )}
                   {(chatMessages[activeAdvisor.id] || []).map((message, index) => (
-                    <div key={`${message.role}-${index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={`${message.role}-${message.created_at || index}`} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[86%] whitespace-pre-line rounded-lg p-3.5 text-xs leading-relaxed ${message.role === 'user' ? 'bg-amber-500 text-slate-950' : 'border border-white/5 bg-slate-950 text-slate-300'}`}>{message.content}</div>
                     </div>
                   ))}
                 </div>
                 <form onSubmit={sendChatMessage} className="mt-4 flex gap-2 border-t border-white/5 pt-4">
                   <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Fazer consulta estratégica..." className="flex-1 border border-white/10 bg-slate-950 p-3 text-xs text-white outline-none focus:border-amber-500" />
-                  <button disabled={isBusy} className="bg-amber-500 px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:opacity-60">Enviar</button>
+                  <button disabled={isBusy || !chatInput.trim()} className="bg-amber-500 px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-950 disabled:cursor-not-allowed disabled:opacity-60">{isBusy ? 'Enviando...' : 'Enviar'}</button>
                 </form>
               </div>
             </div>

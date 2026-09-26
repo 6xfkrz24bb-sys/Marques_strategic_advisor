@@ -10,21 +10,11 @@ function setNativeInputValue(input: HTMLInputElement, value: string) {
   input.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
-function clickFirstAdvisorDiagnostic() {
+function openAdvisorSelection() {
   const advisorsNav = Array.from(document.querySelectorAll<HTMLButtonElement>('button')).find(
     (button) => button.textContent?.trim().toLowerCase() === 'advisors'
   );
   advisorsNav?.click();
-
-  window.setTimeout(() => {
-    const advisorSection = Array.from(document.querySelectorAll<HTMLElement>('section')).find((section) =>
-      section.textContent?.toLowerCase().includes('selecione seus advisors executivos')
-    );
-    const diagnosticButton = Array.from(advisorSection?.querySelectorAll<HTMLButtonElement>('button') || []).find((button) =>
-      button.textContent?.trim().toLowerCase() === 'diagnóstico'
-    );
-    diagnosticButton?.click();
-  }, 450);
 }
 
 function clickAdvisorPanel() {
@@ -89,7 +79,7 @@ function makeCardsClickable() {
     card.style.position = 'relative';
 
     const label = document.createElement('div');
-    label.textContent = isDiagnostic ? 'Iniciar diagnóstico →' : 'Ir para meus advisors →';
+    label.textContent = isDiagnostic ? 'Escolher advisor →' : 'Ir para meus advisors →';
     label.style.marginTop = '18px';
     label.style.color = '#f59e0b';
     label.style.fontSize = '10px';
@@ -99,7 +89,7 @@ function makeCardsClickable() {
     card.appendChild(label);
 
     const action = () => {
-      if (isDiagnostic) clickFirstAdvisorDiagnostic();
+      if (isDiagnostic) openAdvisorSelection();
       else clickAdvisorPanel();
     };
 
@@ -118,6 +108,30 @@ function makeCardsClickable() {
       card.style.borderColor = 'rgba(255,255,255,0.05)';
       card.style.transform = 'translateY(0)';
     };
+  });
+}
+
+function autoHideTrialMessages() {
+  const trialTexts = [
+    'acesso liberado por 15 dias',
+    'seu teste grátis já está ativo',
+    'você já possui acesso ativo aos advisors',
+    'teste grátis já utilizado neste cadastro'
+  ];
+
+  Array.from(document.querySelectorAll<HTMLElement>('div')).forEach((element) => {
+    const text = element.textContent?.trim().toLowerCase() || '';
+    const isTrialMessage = trialTexts.some((trialText) => text === trialText || text.includes(trialText));
+    const isButtonContainer = text.includes('teste grátis 15 dias') || text.includes('meus advisors');
+
+    if (!isTrialMessage || isButtonContainer || element.dataset.trialAutoHide === 'true') return;
+
+    element.dataset.trialAutoHide = 'true';
+    window.setTimeout(() => {
+      element.style.opacity = '0';
+      element.style.transition = 'opacity 250ms ease';
+      window.setTimeout(() => element.remove(), 300);
+    }, 4000);
   });
 }
 
@@ -155,6 +169,7 @@ export function LoggedUserDiagnosticAutofill() {
     async function handleLoggedUserDiagnostic() {
       adjustMarketingCopy();
       makeCardsClickable();
+      autoHideTrialMessages();
       const { data } = await supabase.auth.getSession();
       const session = data.session;
       ensureAdvisorPanelShortcut(Boolean(session?.user?.email));
@@ -163,7 +178,7 @@ export function LoggedUserDiagnosticAutofill() {
       const pageText = document.body.textContent?.toLowerCase() || '';
       if (!supplierRedirected && pageText.includes('cadastro do novo usuário')) {
         supplierRedirected = true;
-        clickFirstAdvisorDiagnostic();
+        openAdvisorSelection();
         return;
       }
 
