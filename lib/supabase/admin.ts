@@ -20,8 +20,10 @@ function findMatchingIntegrationSecret(url: string) {
     }
 
     const prefix = name.slice(0, -urlSuffix.length);
-    return process.env[`${prefix}_SUPABASE_SECRET_KEY`]
+    const secretKey = process.env[`${prefix}_SUPABASE_SECRET_KEY`]
       || process.env[`${prefix}_SUPABASE_SERVICE_ROLE_KEY`];
+
+    if (secretKey) return secretKey;
   }
 
   return undefined;
