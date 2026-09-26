@@ -100,6 +100,18 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ```
 
+Em ambientes que injetam variáveis de uma integração Supabase com prefixo, mantenha
+o mesmo prefixo na URL e na chave administrativa. A aplicação seleciona esse par
+quando a URL corresponde a `NEXT_PUBLIC_SUPABASE_URL`:
+
+```env
+MINHA_INTEGRACAO_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+MINHA_INTEGRACAO_SUPABASE_SECRET_KEY=sb_secret_xxx
+```
+
+Também é aceito `MINHA_INTEGRACAO_SUPABASE_SERVICE_ROLE_KEY` para projetos que
+ainda usam as chaves legadas.
+
 ### 5. Rodar localmente
 
 ```bash
