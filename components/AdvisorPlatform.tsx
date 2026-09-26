@@ -299,6 +299,14 @@ export function AdvisorPlatform() {
           });
 
       if (result.error) throw result.error;
+
+      if (!result.data.session) {
+        setAlertMessage('Conta criada. Confirme o cadastro pelo link enviado ao seu e-mail antes de fazer login.');
+        setAuthMode('login');
+        setAuthPassword('');
+        return;
+      }
+
       setAlertMessage(authMode === 'login' ? 'Login realizado.' : 'Conta criada. Verifique seu e-mail se a confirmação estiver ativa no Supabase.');
       if (selectedAdvisorIds.length) await startCheckout();
       else navigate('panel');
