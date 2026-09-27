@@ -197,7 +197,13 @@ drop policy if exists "Profiles update own" on public.profiles;
 create policy "Profiles update own" on public.profiles for update using (auth.uid() = id);
 
 drop policy if exists "Leads public insert" on public.leads;
-create policy "Leads public insert" on public.leads for insert with check (true);
+drop policy if exists "Leads deny direct client access" on public.leads;
+create policy "Leads deny direct client access"
+on public.leads
+for all
+to anon, authenticated
+using (false)
+with check (false);
 
 drop policy if exists "Suppliers insert authenticated" on public.suppliers;
 create policy "Suppliers insert authenticated" on public.suppliers for insert with check (auth.uid() = user_id or user_id is null);
